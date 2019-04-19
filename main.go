@@ -59,6 +59,7 @@ chmod +x ~/bin/code-server
 	// Starts code-server and forwards the remote port.
 	sshCmd = exec.Command("ssh",
 		"-tt",
+		"-q",
 		"-L",
 		localPort+":localhost:"+localPort,
 		host,
@@ -81,7 +82,11 @@ chmod +x ~/bin/code-server
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	for ctx.Err() == nil {
+	for {
+		err := ctx.Err()
+		if err != nil {
+			flog.Fatal("code-server didn't start in time %v", err)
+		}
 		// Waits for code-server to be available before opening the browser.
 		r, _ := http.NewRequest("GET", url, nil)
 		r = r.WithContext(ctx)
