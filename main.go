@@ -90,18 +90,26 @@ chmod +x ~/bin/code-server
 		break
 	}
 
+	openBrowser(url)
+	sshCmd.Wait()
+}
+
+func openBrowser(url string) {
 	var openCmd *exec.Cmd
 	if commandExists("google-chrome") {
 		openCmd = exec.Command("google-chrome", "--app="+url, "--disable-extensions", "--disable-plugins")
 	} else if commandExists("firefox") {
 		openCmd = exec.Command("firefox", "--url="+url, "-safe-mode")
+	} else {
+		flog.Info("unable to find a browser to open: sshcode only supports firefox and chrome")
+
+		return
 	}
 
-	err = openCmd.Start()
+	err := openCmd.Start()
 	if err != nil {
 		flog.Fatal("failed to open browser: %v", err)
 	}
-	sshCmd.Wait()
 }
 
 // Checks if a command exists locally.
