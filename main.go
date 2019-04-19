@@ -136,7 +136,6 @@ func scanAvailablePort() (string, error) {
 		l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 		if err != nil {
 			// If we have an error the port is taken.
-			port++
 			continue
 		}
 		_ = l.Close()
