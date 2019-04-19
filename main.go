@@ -97,11 +97,19 @@ chmod +x ~/bin/code-server
 func openBrowser(url string) {
 	var openCmd *exec.Cmd
 	if commandExists("google-chrome") {
-		openCmd = exec.Command("google-chrome", "--app="+url, "--disable-extensions", "--disable-plugins")
+		openCmd = exec.Command("google-chrome", fmtChromeOptions(url)...)
+
+	} else if commandExists("chromium") {
+		openCmd = exec.Command("chromium", fmtChromeOptions(url)...)
+
+	} else if commandExists("chromium-browser") {
+		openCmd = exec.Command("chromium-browser", fmtChromeOptions(url)...)
+
 	} else if commandExists("firefox") {
 		openCmd = exec.Command("firefox", "--url="+url, "-safe-mode")
+
 	} else {
-		flog.Info("unable to find a browser to open: sshcode only supports firefox and chrome")
+		flog.Info("unable to find a browser to open: sshcode only supports firefox, chrome, and chromium")
 
 		return
 	}
@@ -110,6 +118,10 @@ func openBrowser(url string) {
 	if err != nil {
 		flog.Fatal("failed to open browser: %v", err)
 	}
+}
+
+func fmtChromeOptions(url string) []string {
+	return []string{"--app=" + url, "--disable-extensions", "--disable-plugins"}
 }
 
 // Checks if a command exists locally.
