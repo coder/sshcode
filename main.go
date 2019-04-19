@@ -9,15 +9,20 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"time"
+
+	"golang.org/x/xerrors"
 
 	"go.coder.com/flog"
 )
 
 func main() {
+	skipSyncFlag := flag.Bool("skipsync", false, "skip syncing local settings and extensions to remote host")
 	flag.Usage = func() {
-		fmt.Printf(`Usage: %v HOST [SSH ARGS...]
+		fmt.Printf(`Usage: [-skipsync] %v HOST [SSH ARGS...]
 
 Start code-server over SSH.
 More info: https://github.com/codercom/sshcode
@@ -43,11 +48,29 @@ More info: https://github.com/codercom/sshcode
 mkdir -p ~/bin
 wget -q https://codesrv-ci.cdr.sh/latest-linux -O ~/bin/code-server
 chmod +x ~/bin/code-server
+mkdir -p ~/.local/share/code-server
 '`,
 	)
 	output, err := sshCmd.CombinedOutput()
 	if err != nil {
 		flog.Fatal("failed to update code-server: %v: %s", err, output)
+	}
+
+	if !(*skipSyncFlag) {
+		start := time.Now()
+		flog.Info("syncing settings")
+		err = syncUserSettings(host)
+		if err != nil {
+			flog.Fatal("failed to sync settings: %v", err)
+		}
+		flog.Info("synced settings in %s", time.Since(start))
+
+		flog.Info("syncing extensions")
+		err = syncExtensions(host)
+		if err != nil {
+			flog.Fatal("failed to sync extensions: %v", err)
+		}
+		flog.Info("synced extensions in %s", time.Since(start))
 	}
 
 	flog.Info("starting code-server...")
@@ -73,7 +96,7 @@ chmod +x ~/bin/code-server
 	}
 
 	url := "http://127.0.0.1:" + localPort
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	for {
 		if ctx.Err() != nil {
@@ -144,4 +167,67 @@ func scanAvailablePort() (string, error) {
 	}
 
 	return "", errors.New("no ports available")
+}
+
+func syncUserSettings(host string) error {
+	localConfDir, err := configDir()
+	if err != nil {
+		return err
+	}
+	const remoteSettingsDir = ".local/share/code-server/User"
+
+	// Append "/" to have rsync copy the contents of the dir.
+	return rsync(localConfDir+"/", remoteSettingsDir, host, "workspaceStorage", "logs", "CachedData")
+}
+
+func syncExtensions(host string) error {
+	localExtensionsDir, err := extensionsDir()
+	if err != nil {
+		return err
+	}
+	const remoteExtensionsDir = ".local/share/code-server/extensions"
+
+	return rsync(localExtensionsDir+"/", remoteExtensionsDir, host)
+}
+
+func rsync(src string, dest string, host string, excludePaths ...string) error {
+	remoteDest := fmt.Sprintf("%s:%s", host, dest)
+	excludeFlags := make([]string, len(excludePaths))
+	for i, path := range excludePaths {
+		excludeFlags[i] = "--exclude=" + path
+	}
+
+	cmd := exec.Command("rsync", append(excludeFlags, "-azv", "--copy-unsafe-links", src, remoteDest)...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	if err != nil {
+		return xerrors.Errorf("failed to rsync '%s' to '%s': %w", src, remoteDest, err)
+	}
+
+	return nil
+}
+
+func configDir() (string, error) {
+	var path string
+	switch runtime.GOOS {
+	case "linux":
+		path = os.ExpandEnv("$HOME/.config/Code/User")
+	case "darwin":
+		path = os.ExpandEnv("$HOME/Library/Application Support/Code/User")
+	default:
+		return "", xerrors.Errorf("unsupported platform: %s", runtime.GOOS)
+	}
+	return filepath.Clean(path), nil
+}
+
+func extensionsDir() (string, error) {
+	var path string
+	switch runtime.GOOS {
+	case "linux", "darwin":
+		path = os.ExpandEnv("$HOME/.vscode/extensions")
+	default:
+		return "", xerrors.Errorf("unsupported platform: %s", runtime.GOOS)
+	}
+	return filepath.Clean(path), nil
 }
