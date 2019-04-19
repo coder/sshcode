@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
+	"math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -18,6 +18,10 @@ import (
 
 	"go.coder.com/flog"
 )
+
+func init() {
+	rand.Seed(time.Now().Unix())
+}
 
 func main() {
 	skipSyncFlag := flag.Bool("skipsync", false, "skip syncing local settings and extensions to remote host")
@@ -74,9 +78,9 @@ mkdir -p ~/.local/share/code-server
 	}
 
 	flog.Info("starting code-server...")
-	localPort, err := scanAvailablePort()
+	localPort, err := randomPort()
 	if err != nil {
-		flog.Fatal("failed to scan available port: %v", err)
+		flog.Fatal("failed to find available port: %v", err)
 	}
 
 	// Starts code-server and forwards the remote port.
@@ -153,20 +157,24 @@ func commandExists(name string) bool {
 	return err == nil
 }
 
-// scanAvailablePort scans 1024-4096 until an available port is found.
-func scanAvailablePort() (string, error) {
-	for port := 1024; port < 4096; port++ {
+// randomPort picks a random port to start code-server on.
+func randomPort() (string, error) {
+	const (
+		minPort  = 1024
+		maxPort  = 65535
+		maxTries = 10
+	)
+	for i := 0; i < maxTries; i++ {
+		port := rand.Intn(maxPort-minPort+1) + minPort
 		l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
-		if err != nil {
-			// If we have an error the port is taken.
-			continue
+		if err == nil {
+			_ = l.Close()
+			return strconv.Itoa(port), nil
 		}
-		_ = l.Close()
-
-		return strconv.Itoa(port), nil
+		flog.Info("port taken: %d", port)
 	}
 
-	return "", errors.New("no ports available")
+	return "", xerrors.Errorf("max number of tries exceeded: %d", maxTries)
 }
 
 func syncUserSettings(host string) error {
