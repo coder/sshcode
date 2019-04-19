@@ -9,7 +9,7 @@
 Chrome is recommended.
 
 ```bash
-go get go.coder.com/sshcode
+GO111MODULE=off go get go.coder.com/sshcode
 ```
 
 ## Usage
