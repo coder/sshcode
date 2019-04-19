@@ -47,7 +47,7 @@ chmod +x ~/bin/code-server
 	)
 	output, err := sshCmd.CombinedOutput()
 	if err != nil {
-		flog.Fatal("failed to update code-server: %v: %s", err, string(output))
+		flog.Fatal("failed to update code-server: %v: %s", err, output)
 	}
 
 	flog.Info("starting code-server...")
@@ -72,20 +72,12 @@ chmod +x ~/bin/code-server
 		flog.Fatal("failed to start code-server: %v", err)
 	}
 
-	var openCmd *exec.Cmd
 	url := "http://127.0.0.1:" + localPort
-	if commandExists("google-chrome") {
-		openCmd = exec.Command("google-chrome", "--app="+url, "--disable-extensions", "--disable-plugins")
-	} else if commandExists("firefox") {
-		openCmd = exec.Command("firefox", "--url="+url, "-safe-mode")
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	for {
-		err := ctx.Err()
-		if err != nil {
-			flog.Fatal("code-server didn't start in time %v", err)
+		if ctx.Err() != nil {
+			flog.Fatal("code-server didn't start in time %v", ctx.Err())
 		}
 		// Waits for code-server to be available before opening the browser.
 		r, _ := http.NewRequest("GET", url, nil)
@@ -96,6 +88,13 @@ chmod +x ~/bin/code-server
 		}
 		resp.Body.Close()
 		break
+	}
+
+	var openCmd *exec.Cmd
+	if commandExists("google-chrome") {
+		openCmd = exec.Command("google-chrome", "--app="+url, "--disable-extensions", "--disable-plugins")
+	} else if commandExists("firefox") {
+		openCmd = exec.Command("firefox", "--url="+url, "-safe-mode")
 	}
 
 	err = openCmd.Start()
