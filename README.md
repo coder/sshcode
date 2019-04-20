@@ -47,6 +47,6 @@ By default, `sshcode` will `rsync` your local VS Code settings and extensions
 to the remote server every time you connect.
 
 This operation may take a while on a slow connections, but will be fast
-on follow-on connections to the same server.
+on follow-up connections to the same server.
 
 To disable this feature entirely, pass the `--skipsync` flag.
