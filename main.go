@@ -146,6 +146,8 @@ func openBrowser(url string) {
 		openCmd = exec.Command("chromium-browser", fmtChromeOptions(url)...)
 	case commandExists("firefox"):
 		openCmd = exec.Command("firefox", "--url="+url, "-safe-mode")
+	case pathExists("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"):
+		openCmd = exec.Command("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", fmtChromeOptions(url)...)
 	default:
 		flog.Info("unable to find a browser to open: sshcode only supports firefox, chrome, and chromium")
 	}
@@ -163,6 +165,11 @@ func fmtChromeOptions(url string) []string {
 // Checks if a command exists locally.
 func commandExists(name string) bool {
 	_, err := exec.LookPath(name)
+	return err == nil
+}
+
+func pathExists(name string) bool {
+	_, err := os.Stat(name)
 	return err == nil
 }
 
