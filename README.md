@@ -1,6 +1,11 @@
 # sshcode
 
-`sshcode` is a CLI to automatically install and run [code-server](https://github.com/codercom/code-server) over SSH.
+[!["Open Issues"](https://img.shields.io/github/issues-raw/codercom/sshcode.svg)](https://github.com/codercom/sshcode/issues)
+[!["Latest Release"](https://img.shields.io/github/release/codercom/sshcode.svg)](https://github.com/codercom/sshcode/releases/latest)
+[![MIT license](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/codercom/sshcode/blob/master/LICENSE)
+[![Discord](https://img.shields.io/discord/463752820026376202.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/zxSwN8Z)
+
+`sshcode` is a CLI to automatically install and run [sshcode](https://github.com/codercom/sshcode) over SSH.
 
 It uploads your extensions and settings automatically, so you can seamlessly use
 remote servers as VS Code hosts.
