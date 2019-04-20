@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pkg/browser"
@@ -58,41 +59,42 @@ More info: https://github.com/codercom/sshcode
 
 	const codeServerPath = "/tmp/codessh-code-server"
 
-	// Downloads the latest code-server and allows it to be executed.
-	sshCmd := exec.Command("ssh",
-		"-tt",
-		host,
-		`/bin/bash -c 'set -euxo pipefail || exit 1
-# Make sure any currently running code-server is gone so we can overwrite
-# the binary.
-pkill -9 `+filepath.Base(codeServerPath)+` || true
-wget -q https://codesrv-ci.cdr.sh/latest-linux -O `+codeServerPath+`
+	downloadScript := `set -euxo pipefail || exit 1
+
 mkdir -p ~/.local/share/code-server
-cd `+filepath.Dir(codeServerPath)+`
+cd ` + filepath.Dir(codeServerPath) + `
 wget -N https://codesrv-ci.cdr.sh/latest-linux
-[ -f `+codeServerPath+` ] && rm `+codeServerPath+`
-ln latest-linux `+codeServerPath+`
-chmod +x `+codeServerPath+`
-'`,
+[ -f ` + codeServerPath + ` ] && rm ` + codeServerPath + `
+ln latest-linux ` + codeServerPath + `
+chmod +x ` + codeServerPath
+	// Downloads the latest code-server and allows it to be executed.
+	sshCmdStr := fmt.Sprintf("ssh" +
+		" " + *sshFlags + " " +
+		host + " /bin/bash",
 	)
+	sshCmd := exec.Command("sh", "-c", sshCmdStr)
 	sshCmd.Stdout = os.Stdout
 	sshCmd.Stderr = os.Stderr
+	sshCmd.Stdin = strings.NewReader(downloadScript)
 	err := sshCmd.Run()
 	if err != nil {
-		flog.Fatal("failed to update code-server: %v", err)
+		flog.Fatal("failed to update code-server: %v\n---ssh cmd---\n%s\n---download script---\n%s", err,
+			sshCmdStr,
+			downloadScript,
+		)
 	}
 
 	if !*skipSyncFlag {
 		start := time.Now()
 		flog.Info("syncing settings")
-		err = syncUserSettings(host, false)
+		err = syncUserSettings(*sshFlags, host, false)
 		if err != nil {
 			flog.Fatal("failed to sync settings: %v", err)
 		}
 		flog.Info("synced settings in %s", time.Since(start))
 
 		flog.Info("syncing extensions")
-		err = syncExtensions(host, false)
+		err = syncExtensions(*sshFlags, host, false)
 		if err != nil {
 			flog.Fatal("failed to sync extensions: %v", err)
 		}
@@ -105,7 +107,7 @@ chmod +x `+codeServerPath+`
 		flog.Fatal("failed to find available port: %v", err)
 	}
 
-	sshCmdStr := fmt.Sprintf("ssh -tt -q -L %v %v %v 'cd %v; %v --host 127.0.0.1 --allow-http --no-auth --port=%v'",
+	sshCmdStr = fmt.Sprintf("ssh -tt -q -L %v %v %v 'cd %v; %v --host 127.0.0.1 --allow-http --no-auth --port=%v'",
 		localPort+":localhost:"+localPort, *sshFlags, host, dir, codeServerPath, localPort,
 	)
 
@@ -162,12 +164,12 @@ chmod +x `+codeServerPath+`
 
 	flog.Info("synchronizing VS Code back to local")
 
-	err = syncExtensions(host, true)
+	err = syncExtensions(*sshFlags, host, true)
 	if err != nil {
 		flog.Fatal("failed to sync extensions back: %v", err)
 	}
 
-	err = syncUserSettings(host, true)
+	err = syncUserSettings(*sshFlags, host, true)
 	if err != nil {
 		flog.Fatal("failed to user settigns extensions back: %v", err)
 	}
@@ -235,7 +237,7 @@ func randomPort() (string, error) {
 	return "", xerrors.Errorf("max number of tries exceeded: %d", maxTries)
 }
 
-func syncUserSettings(host string, back bool) error {
+func syncUserSettings(sshFlags string, host string, back bool) error {
 	localConfDir, err := configDir()
 	if err != nil {
 		return err
@@ -252,10 +254,10 @@ func syncUserSettings(host string, back bool) error {
 	}
 
 	// Append "/" to have rsync copy the contents of the dir.
-	return rsync(src, dest, "workspaceStorage", "logs", "CachedData")
+	return rsync(src, dest, sshFlags, "workspaceStorage", "logs", "CachedData")
 }
 
-func syncExtensions(host string, back bool) error {
+func syncExtensions(sshFlags string, host string, back bool) error {
 	localExtensionsDir, err := extensionsDir()
 	if err != nil {
 		return err
@@ -270,16 +272,17 @@ func syncExtensions(host string, back bool) error {
 		dest, src = src, dest
 	}
 
-	return rsync(src, dest)
+	return rsync(src, dest, sshFlags)
 }
 
-func rsync(src string, dest string, excludePaths ...string) error {
+func rsync(src string, dest string, sshFlags string, excludePaths ...string) error {
 	excludeFlags := make([]string, len(excludePaths))
 	for i, path := range excludePaths {
 		excludeFlags[i] = "--exclude=" + path
 	}
 
 	cmd := exec.Command("rsync", append(excludeFlags, "-azvr",
+		"-e", "ssh "+sshFlags,
 		// Only update newer directories, and sync times
 		// to keep things simple.
 		"-u", "--times",
