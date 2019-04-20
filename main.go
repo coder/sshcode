@@ -14,9 +14,9 @@ import (
 	"strconv"
 	"time"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/browser"
 	"go.coder.com/flog"
+	"golang.org/x/xerrors"
 )
 
 func init() {
@@ -139,27 +139,35 @@ func openBrowser(url string) {
 	var openCmd *exec.Cmd
 	switch {
 	case commandExists("google-chrome"):
-		openCmd = exec.Command("google-chrome", fmtChromeOptions(url)...)
+		openCmd = exec.Command("google-chrome", chromeOptions(url)...)
 	case commandExists("chromium"):
-		openCmd = exec.Command("chromium", fmtChromeOptions(url)...)
+		openCmd = exec.Command("chromium", chromeOptions(url)...)
 	case commandExists("chromium-browser"):
-		openCmd = exec.Command("chromium-browser", fmtChromeOptions(url)...)
-	case commandExists("firefox"):
-		openCmd = exec.Command("firefox", "--url="+url, "-safe-mode")
+		openCmd = exec.Command("chromium-browser", chromeOptions(url)...)
 	case pathExists("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"):
-		openCmd = exec.Command("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", fmtChromeOptions(url)...)
+		openCmd = exec.Command("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", chromeOptions(url)...)
 	default:
-		flog.Info("unable to find a browser to open: sshcode only supports firefox, chrome, and chromium")
+		err := browser.OpenURL(url)
+		if err != nil {
+			flog.Error("failed to open browser: %v", err)
+		}
+		return
 	}
 
+	// We do not use CombinedOutput because if there is no chrome instance, this will block
+	// and become the parent process instead of using an existing chrome instance.
 	err := openCmd.Start()
 	if err != nil {
-		flog.Fatal("failed to open browser: %v", err)
+		flog.Error("failed to open browser: %v", err)
 	}
 }
 
-func fmtChromeOptions(url string) []string {
+func chromeOptions(url string) []string {
 	return []string{"--app=" + url, "--disable-extensions", "--disable-plugins"}
+}
+
+func firefoxOptions(url string) []string {
+	return []string{"--url=" + url, "-safe-mode"}
 }
 
 // Checks if a command exists locally.
