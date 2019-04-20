@@ -2,6 +2,13 @@
 
 `sshcode` is a CLI to automatically install and run [code-server](https://github.com/codercom/code-server) over SSH.
 
+It uploads your extensions and settings automatically, so you can seamlessly use
+remote servers as VS Code hosts.
+
+If you have Chrome installed, it opens the browser in app mode. That means
+there's no keybind conflicts, address bar, or indication that you're coding within a browser.
+**It feels just like native VS Code.**
+
 ![Demo](/demo.gif)
 
 ## Install
