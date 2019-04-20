@@ -163,7 +163,7 @@ func openBrowser(url string) {
 }
 
 func chromeOptions(url string) []string {
-	return []string{"--app=" + url, "--disable-extensions", "--disable-plugins"}
+	return []string{"--app=" + url, "--disable-extensions", "--disable-plugins", "--incognito"}
 }
 
 // Checks if a command exists locally.
