@@ -12,6 +12,8 @@ Chrome is recommended.
 go get go.coder.com/sshcode
 ```
 
+Or, grab a [pre-built binary](https://github.com/codercom/sshcode/releases).
+
 ## Usage
 
 ```bash
