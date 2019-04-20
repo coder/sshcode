@@ -166,10 +166,6 @@ func chromeOptions(url string) []string {
 	return []string{"--app=" + url, "--disable-extensions", "--disable-plugins"}
 }
 
-func firefoxOptions(url string) []string {
-	return []string{"--url=" + url, "-safe-mode"}
-}
-
 // Checks if a command exists locally.
 func commandExists(name string) bool {
 	_, err := exec.LookPath(name)
