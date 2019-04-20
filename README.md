@@ -8,6 +8,8 @@
 
 Chrome is recommended.
 
+Install with `go`:
+
 ```bash
 go get go.coder.com/sshcode
 ```
