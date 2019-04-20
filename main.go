@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"strings"
 	"time"
 
 	"golang.org/x/xerrors"
@@ -47,7 +46,7 @@ More info: https://github.com/codercom/sshcode
 
 	dir := flag.Arg(1)
 	if dir == "" {
-		dir = "\\~"
+		dir = "~"
 	}
 
 	flog.Info("ensuring code-server is updated...")
@@ -59,15 +58,20 @@ More info: https://github.com/codercom/sshcode
 		"-tt",
 		host,
 		`/bin/bash -c 'set -euxo pipefail || exit 1
-mkdir -p ~/bin
 wget -q https://codesrv-ci.cdr.sh/latest-linux -O `+codeServerPath+`
-chmod +x `+codeServerPath+` 
 mkdir -p ~/.local/share/code-server
+cd `+filepath.Dir(codeServerPath)+`
+wget -N https://codesrv-ci.cdr.sh/latest-linux
+[ -f `+codeServerPath+` ] && rm `+codeServerPath+`
+ln latest-linux `+codeServerPath+`
+chmod +x `+codeServerPath+`
 '`,
 	)
-	output, err := sshCmd.CombinedOutput()
+	sshCmd.Stdout = os.Stdout
+	sshCmd.Stderr = os.Stderr
+	err := sshCmd.Run()
 	if err != nil {
-		flog.Fatal("failed to update code-server: %v: %s", err, output)
+		flog.Fatal("failed to update code-server: %v", err)
 	}
 
 	if !(*skipSyncFlag) {
@@ -92,9 +96,6 @@ mkdir -p ~/.local/share/code-server
 	if err != nil {
 		flog.Fatal("failed to find available port: %v", err)
 	}
-
-	// Escaped so interpreted by the remote shell, not local.
-	dir = strings.Replace(dir, "~", "\\~", 1)
 
 	sshCmdStr := fmt.Sprintf("ssh -tt -q -L %v %v %v 'cd %v; %v --host 127.0.0.1 --allow-http --no-auth --port=%v'",
 		localPort+":localhost:"+localPort, *sshFlags, host, dir, codeServerPath, localPort,
