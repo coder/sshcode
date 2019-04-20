@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"golang.org/x/xerrors"
@@ -25,12 +26,14 @@ func init() {
 
 func main() {
 	skipSyncFlag := flag.Bool("skipsync", false, "skip syncing local settings and extensions to remote host")
+	sshFlags := flag.String("ssh-flags", "", "custom SSH flags")
 	flag.Usage = func() {
-		fmt.Printf(`Usage: [-skipsync] %v HOST [SSH ARGS...]
+		fmt.Printf(`Usage: [-skipsync] %v HOST [DIR] [SSH ARGS...]
 
 Start code-server over SSH.
 More info: https://github.com/codercom/sshcode
-`, os.Args[0])
+`, os.Args[0],
+		)
 	}
 
 	flag.Parse()
@@ -42,7 +45,14 @@ More info: https://github.com/codercom/sshcode
 		os.Exit(1)
 	}
 
+	dir := flag.Arg(1)
+	if dir == "" {
+		dir = "\\~"
+	}
+
 	flog.Info("ensuring code-server is updated...")
+
+	const codeServerPath = "/tmp/codessh-code-server"
 
 	// Downloads the latest code-server and allows it to be executed.
 	sshCmd := exec.Command("ssh",
@@ -50,8 +60,8 @@ More info: https://github.com/codercom/sshcode
 		host,
 		`/bin/bash -c 'set -euxo pipefail || exit 1
 mkdir -p ~/bin
-wget -q https://codesrv-ci.cdr.sh/latest-linux -O ~/bin/code-server
-chmod +x ~/bin/code-server
+wget -q https://codesrv-ci.cdr.sh/latest-linux -O `+codeServerPath+`
+chmod +x `+codeServerPath+` 
 mkdir -p ~/.local/share/code-server
 '`,
 	)
@@ -83,15 +93,18 @@ mkdir -p ~/.local/share/code-server
 		flog.Fatal("failed to find available port: %v", err)
 	}
 
-	// Starts code-server and forwards the remote port.
-	sshCmd = exec.Command("ssh",
-		"-tt",
-		"-q",
-		"-L",
-		localPort+":localhost:"+localPort,
-		host,
-		"~/bin/code-server --host 127.0.0.1 --allow-http --no-auth --port="+localPort,
+	// Escaped so interpreted by the remote shell, not local.
+	dir = strings.Replace(dir, "~", "\\~", 1)
+
+	sshCmdStr := fmt.Sprintf("ssh -tt -q -L %v %v %v 'cd %v; %v --host 127.0.0.1 --allow-http --no-auth --port=%v'",
+		localPort+":localhost:"+localPort, *sshFlags, host, dir, codeServerPath, localPort,
 	)
+
+	// Starts code-server and forwards the remote port.
+	sshCmd = exec.Command("sh", "-c",
+		sshCmdStr,
+	)
+	sshCmd.Stdin = os.Stdin
 	sshCmd.Stdout = os.Stdout
 	sshCmd.Stderr = os.Stderr
 	err = sshCmd.Start()
@@ -123,22 +136,17 @@ mkdir -p ~/.local/share/code-server
 
 func openBrowser(url string) {
 	var openCmd *exec.Cmd
-	if commandExists("google-chrome") {
+	switch {
+	case commandExists("google-chrome"):
 		openCmd = exec.Command("google-chrome", fmtChromeOptions(url)...)
-
-	} else if commandExists("chromium") {
+	case commandExists("chromium"):
 		openCmd = exec.Command("chromium", fmtChromeOptions(url)...)
-
-	} else if commandExists("chromium-browser") {
+	case commandExists("chromium-browser"):
 		openCmd = exec.Command("chromium-browser", fmtChromeOptions(url)...)
-
-	} else if commandExists("firefox") {
+	case commandExists("firefox"):
 		openCmd = exec.Command("firefox", "--url="+url, "-safe-mode")
-
-	} else {
+	default:
 		flog.Info("unable to find a browser to open: sshcode only supports firefox, chrome, and chromium")
-
-		return
 	}
 
 	err := openCmd.Start()
