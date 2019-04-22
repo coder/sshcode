@@ -51,6 +51,8 @@ on follow-up connections to the same server.
 
 To disable this feature entirely, pass the `--skipsync` flag.
 
+You can specify `--insiders` to sync settings and extensions from VS Code Insiders.
+
 ### Sync-back
 
 By default, VS Code changes on the remote server won't be synced back
