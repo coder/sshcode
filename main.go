@@ -30,6 +30,7 @@ func main() {
 		skipSyncFlag = flag.Bool("skipsync", false, "skip syncing local settings and extensions to remote host")
 		sshFlags     = flag.String("ssh-flags", "", "custom SSH flags")
 		syncBack     = flag.Bool("b", false, "sync extensions back on termination")
+		insiders     = flag.Bool("insiders", false, "use configs and extensions from VSCode Insiders")
 	)
 
 	flag.Usage = func() {
@@ -87,14 +88,14 @@ chmod +x ` + codeServerPath
 	if !*skipSyncFlag {
 		start := time.Now()
 		flog.Info("syncing settings")
-		err = syncUserSettings(*sshFlags, host, false)
+		err = syncUserSettings(*sshFlags, host, false, *insiders)
 		if err != nil {
 			flog.Fatal("failed to sync settings: %v", err)
 		}
 		flog.Info("synced settings in %s", time.Since(start))
 
 		flog.Info("syncing extensions")
-		err = syncExtensions(*sshFlags, host, false)
+		err = syncExtensions(*sshFlags, host, false, *insiders)
 		if err != nil {
 			flog.Fatal("failed to sync extensions: %v", err)
 		}
@@ -164,12 +165,12 @@ chmod +x ` + codeServerPath
 
 	flog.Info("synchronizing VS Code back to local")
 
-	err = syncExtensions(*sshFlags, host, true)
+	err = syncExtensions(*sshFlags, host, true, *insiders)
 	if err != nil {
 		flog.Fatal("failed to sync extensions back: %v", err)
 	}
 
-	err = syncUserSettings(*sshFlags, host, true)
+	err = syncUserSettings(*sshFlags, host, true, *insiders)
 	if err != nil {
 		flog.Fatal("failed to user settigns extensions back: %v", err)
 	}
@@ -237,8 +238,8 @@ func randomPort() (string, error) {
 	return "", xerrors.Errorf("max number of tries exceeded: %d", maxTries)
 }
 
-func syncUserSettings(sshFlags string, host string, back bool) error {
-	localConfDir, err := configDir()
+func syncUserSettings(sshFlags string, host string, back bool, insiders bool) error {
+	localConfDir, err := configDir(insiders)
 	if err != nil {
 		return err
 	}
@@ -257,8 +258,8 @@ func syncUserSettings(sshFlags string, host string, back bool) error {
 	return rsync(src, dest, sshFlags, "workspaceStorage", "logs", "CachedData")
 }
 
-func syncExtensions(sshFlags string, host string, back bool) error {
-	localExtensionsDir, err := extensionsDir()
+func syncExtensions(sshFlags string, host string, back bool, insiders bool) error {
+	localExtensionsDir, err := extensionsDir(insiders)
 	if err != nil {
 		return err
 	}
@@ -300,40 +301,41 @@ func rsync(src string, dest string, sshFlags string, excludePaths ...string) err
 	return nil
 }
 
-func configDir() (string, error) {
+func configDir(insiders bool) (string, error) {
 	var path string
-	var insiderPath string
+	var basePath string
 	switch runtime.GOOS {
 	case "linux":
-		path = os.ExpandEnv("$HOME/.config/Code/User/")
-		insiderPath = os.ExpandEnv("$HOME/.config/Code - Insiders/User/")
+		basePath = os.ExpandEnv("$HOME/.config")
 	case "darwin":
-		path = os.ExpandEnv("$HOME/Library/Application Support/Code/User/")
-		insiderPath = os.ExpandEnv("$HOME/Library/Application Support/Code - Insiders/User/")
+		basePath = os.ExpandEnv("$HOME/Library/Application Support")
 	default:
 		return "", xerrors.Errorf("unsupported platform: %s", runtime.GOOS)
 	}
 
-	if pathExists(insiderPath) {
-		return filepath.Clean(insiderPath), nil
+	if insiders {
+		path = fmt.Sprintf("%s/Code - Insiders/User/", basePath)
+	} else {
+		path = fmt.Sprintf("%s/Code/User/", basePath)
 	}
 
 	return filepath.Clean(path), nil
 }
 
-func extensionsDir() (string, error) {
+func extensionsDir(insiders bool) (string, error) {
 	var path string
-	var insiderPath string
+	var basePath string
 	switch runtime.GOOS {
 	case "linux", "darwin":
-		path = os.ExpandEnv("$HOME/.vscode/extensions/")
-		insiderPath = os.ExpandEnv("$HOME/.vscode-insiders/extensions/")
+		basePath = os.ExpandEnv("$HOME")
 	default:
 		return "", xerrors.Errorf("unsupported platform: %s", runtime.GOOS)
 	}
 
-	if pathExists(insiderPath) {
-		return filepath.Clean(insiderPath), nil
+	if insiders {
+		path = fmt.Sprintf("%s/.vscode-insiders/extensions/", basePath)
+	} else {
+		path = fmt.Sprintf("%s/.vscode/extensions/", basePath)
 	}
 
 	return filepath.Clean(path), nil
