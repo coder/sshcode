@@ -54,10 +54,10 @@ To disable this feature entirely, pass the `--skipsync` flag.
 ### Custom settings directories
 
 If you're using an alternative release of VS Code such as VS Code Insiders, you
-will need to specify your configuration directory through the `VSCODE_CONFIG_DIR`
+must specify your configuration directory through the `VSCODE_CONFIG_DIR`
 environment variable.
 
-The following will make `sshcode` work with VS Code insiders:
+The following will make `sshcode` work with VS Code Insiders:
 
 ```bash
 export VSCODE_CONFIG_DIR="$HOME/.config/Code - Insiders/User"
