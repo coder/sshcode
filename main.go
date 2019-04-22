@@ -302,24 +302,39 @@ func rsync(src string, dest string, sshFlags string, excludePaths ...string) err
 
 func configDir() (string, error) {
 	var path string
+	var insiderPath string
 	switch runtime.GOOS {
 	case "linux":
 		path = os.ExpandEnv("$HOME/.config/Code/User/")
+		insiderPath = os.ExpandEnv("$HOME/.config/Code - Insiders/User/")
 	case "darwin":
 		path = os.ExpandEnv("$HOME/Library/Application Support/Code/User/")
+		insiderPath = os.ExpandEnv("$HOME/Library/Application Support/Code - Insiders/User/")
 	default:
 		return "", xerrors.Errorf("unsupported platform: %s", runtime.GOOS)
 	}
+
+	if pathExists(insiderPath) {
+		return filepath.Clean(insiderPath), nil
+	}
+
 	return filepath.Clean(path), nil
 }
 
 func extensionsDir() (string, error) {
 	var path string
+	var insiderPath string
 	switch runtime.GOOS {
 	case "linux", "darwin":
 		path = os.ExpandEnv("$HOME/.vscode/extensions/")
+		insiderPath = os.ExpandEnv("$HOME/.vscode-insiders/extensions/")
 	default:
 		return "", xerrors.Errorf("unsupported platform: %s", runtime.GOOS)
 	}
+
+	if pathExists(insiderPath) {
+		return filepath.Clean(insiderPath), nil
+	}
+
 	return filepath.Clean(path), nil
 }
