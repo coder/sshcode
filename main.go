@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"text/tabwriter"
 	"time"
 
 	"github.com/pkg/browser"
@@ -25,6 +26,36 @@ func init() {
 	rand.Seed(time.Now().Unix())
 }
 
+const helpTabWidth = 5
+
+var helpTab = strings.Repeat(" ", helpTabWidth)
+
+// flagHelp generates a friendly help string for all globally registered command
+// line flags.
+func flagHelp() string {
+	var bd strings.Builder
+
+	w := tabwriter.NewWriter(&bd, 3, 10, helpTabWidth, ' ', 0)
+
+	fmt.Fprintf(w, "Flags:\n")
+	var count int
+	flag.VisitAll(func(f *flag.Flag) {
+		count++
+		if f.DefValue == "" {
+			fmt.Fprintf(w, "\t-%v\t%v\n", f.Name, f.Usage)
+		} else {
+			fmt.Fprintf(w, "\t-%v\t%v\t(%v)\n", f.Name, f.Usage, f.DefValue)
+		}
+	})
+	if count == 0 {
+		return "\n"
+	}
+
+	w.Flush()
+
+	return bd.String()
+}
+
 func main() {
 	var (
 		skipSyncFlag = flag.Bool("skipsync", false, "skip syncing local settings and extensions to remote host")
@@ -33,11 +64,15 @@ func main() {
 	)
 
 	flag.Usage = func() {
-		fmt.Printf(`Usage: [-skipsync] %v HOST [DIR] [SSH ARGS...]
-
-Start code-server over SSH.
+		fmt.Printf(`Usage: %v [FLAGS] HOST [DIR]
+Start VS Code via code-server over SSH.
 More info: https://github.com/codercom/sshcode
-`, os.Args[0],
+
+Arguments:
+`+helpTab+`HOST is passed into the ssh command.
+`+helpTab+`DIR is optional.
+
+%v`, os.Args[0], flagHelp(),
 		)
 	}
 
