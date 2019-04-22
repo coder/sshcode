@@ -2,7 +2,15 @@
 export GOARCH=amd64
 
 build(){
-	go build -o bin/sshcode-$GOOS-$GOARCH
+	tmpdir=$(mktemp -d)
+	go build -o $tmpdir/sshcode
+
+	pushd $tmpdir
+	tarname=sshcode-$GOOS-$GOARCH.tar
+	tar -cf $tarname sshcode
+	popd	
+	cp $tmpdir/$tarname bin
+	rm -rf $tmpdir
 }
 
 GOOS=darwin build
