@@ -34,7 +34,7 @@ func main() {
 	)
 
 	flag.Usage = func() {
-		fmt.Printf(`Usage: [-skipsync] %v HOST [DIR] [SSH ARGS...]
+		fmt.Printf(`Usage: [-skipsync] [-insiders] %v HOST [DIR] [SSH ARGS...]
 
 Start code-server over SSH.
 More info: https://github.com/codercom/sshcode
@@ -302,7 +302,6 @@ func rsync(src string, dest string, sshFlags string, excludePaths ...string) err
 }
 
 func configDir(insiders bool) (string, error) {
-	var path string
 	var basePath string
 	switch runtime.GOOS {
 	case "linux":
@@ -314,16 +313,13 @@ func configDir(insiders bool) (string, error) {
 	}
 
 	if insiders {
-		path = fmt.Sprintf("%s/Code - Insiders/User/", basePath)
-	} else {
-		path = fmt.Sprintf("%s/Code/User/", basePath)
+		return filepath.Join(basePath, "Code - Insiders", "User"), nil
 	}
 
-	return filepath.Clean(path), nil
+	return filepath.Join(basePath, "Code", "User"), nil
 }
 
 func extensionsDir(insiders bool) (string, error) {
-	var path string
 	var basePath string
 	switch runtime.GOOS {
 	case "linux", "darwin":
@@ -333,10 +329,8 @@ func extensionsDir(insiders bool) (string, error) {
 	}
 
 	if insiders {
-		path = fmt.Sprintf("%s/.vscode-insiders/extensions/", basePath)
-	} else {
-		path = fmt.Sprintf("%s/.vscode/extensions/", basePath)
+		return filepath.Join(basePath,".vscode-insiders", "extensions"), nil
 	}
 
-	return filepath.Clean(path), nil
+	return filepath.Join(basePath, ".vscode", "extensions"), nil
 }
