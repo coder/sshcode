@@ -13,34 +13,44 @@ const (
 	vsCodeExtensionsDirEnv = "VSCODE_EXTENSIONS_DIR"
 )
 
-func configDir() (string, error) {
+func configDir(insiders bool) (string, error) {
 	if env, ok := os.LookupEnv(vsCodeConfigDirEnv); ok {
 		return os.ExpandEnv(env), nil
 	}
 
-	var path string
+	var basePath string
 	switch runtime.GOOS {
 	case "linux":
-		path = os.ExpandEnv("$HOME/.config/Code/User/")
+		basePath = os.ExpandEnv("$HOME/.config")
 	case "darwin":
-		path = os.ExpandEnv("$HOME/Library/Application Support/Code/User/")
+		basePath = os.ExpandEnv("$HOME/Library/Application Support")
 	default:
 		return "", xerrors.Errorf("unsupported platform: %s", runtime.GOOS)
 	}
-	return filepath.Clean(path), nil
+
+	if insiders {
+		return filepath.Join(basePath, "Code - Insiders", "User"), nil
+	}
+
+	return filepath.Join(basePath, "Code", "User"), nil
 }
 
-func extensionsDir() (string, error) {
+func extensionsDir(insiders bool) (string, error) {
 	if env, ok := os.LookupEnv(vsCodeExtensionsDirEnv); ok {
 		return os.ExpandEnv(env), nil
 	}
 
-	var path string
+	var basePath string
 	switch runtime.GOOS {
 	case "linux", "darwin":
-		path = os.ExpandEnv("$HOME/.vscode/extensions/")
+		basePath = os.ExpandEnv("$HOME")
 	default:
 		return "", xerrors.Errorf("unsupported platform: %s", runtime.GOOS)
 	}
-	return filepath.Clean(path), nil
+
+	if insiders {
+		return filepath.Join(basePath, ".vscode-insiders", "extensions"), nil
+	}
+
+	return filepath.Join(basePath, ".vscode", "extensions"), nil
 }
