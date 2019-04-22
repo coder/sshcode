@@ -51,6 +51,18 @@ on follow-up connections to the same server.
 
 To disable this feature entirely, pass the `--skipsync` flag.
 
+### Custom settings directories
+
+If you're using an alternative release of VS Code such as VS Code Insiders, you
+will need to specify your configuration directory through the `VSCODE_CONFIG_DIR`
+environment variable.
+
+The following will make `sshcode` work with VS Code insiders:
+
+```bash
+export VSCODE_CONFIG_DIR="$HOME/.config/Code - Insiders/User"
+```
+
 ### Sync-back
 
 By default, VS Code changes on the remote server won't be synced back
