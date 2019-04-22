@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"text/tabwriter"
@@ -66,6 +65,11 @@ func main() {
 	flag.Usage = func() {
 		fmt.Printf(`Usage: %v [FLAGS] HOST [DIR]
 Start VS Code via code-server over SSH.
+
+Environment variables:
+		`+vsCodeConfigDirEnv+`	use special VS Code settings dir.
+		`+vsCodeExtensionsDirEnv+`	use special VS Code extensions dir.
+
 More info: https://github.com/codercom/sshcode
 
 Arguments:
@@ -335,28 +339,4 @@ func rsync(src string, dest string, sshFlags string, excludePaths ...string) err
 	}
 
 	return nil
-}
-
-func configDir() (string, error) {
-	var path string
-	switch runtime.GOOS {
-	case "linux":
-		path = os.ExpandEnv("$HOME/.config/Code/User/")
-	case "darwin":
-		path = os.ExpandEnv("$HOME/Library/Application Support/Code/User/")
-	default:
-		return "", xerrors.Errorf("unsupported platform: %s", runtime.GOOS)
-	}
-	return filepath.Clean(path), nil
-}
-
-func extensionsDir() (string, error) {
-	var path string
-	switch runtime.GOOS {
-	case "linux", "darwin":
-		path = os.ExpandEnv("$HOME/.vscode/extensions/")
-	default:
-		return "", xerrors.Errorf("unsupported platform: %s", runtime.GOOS)
-	}
-	return filepath.Clean(path), nil
 }
