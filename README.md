@@ -18,7 +18,7 @@ there's no keybind conflicts, address bar, or indication that you're coding with
 
 ## Install
 
-Chrome is recommended.
+**Have Chrome installed for the best experience.**
 
 Install with `go`:
 
