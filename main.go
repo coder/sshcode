@@ -196,7 +196,7 @@ chmod +x ` + codeServerPath
 	case <-c:
 	}
 
-	if !*syncBack {
+	if !*syncBack || *skipSyncFlag {
 		flog.Info("shutting down")
 		return
 	}
