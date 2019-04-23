@@ -327,6 +327,9 @@ func rsync(src string, dest string, sshFlags string, excludePaths ...string) err
 		// Only update newer directories, and sync times
 		// to keep things simple.
 		"-u", "--times",
+		// This is more unsafe, but it's obnoxious having to enter VS Code
+		// locally in order to properly delete an extension.
+		"--delete",
 		"--copy-unsafe-links",
 		src, dest,
 	)...,
