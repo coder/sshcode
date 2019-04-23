@@ -23,7 +23,7 @@ Chrome is recommended.
 Install with `go`:
 
 ```bash
-go get go.coder.com/sshcode
+go get -u go.coder.com/sshcode
 ```
 
 Or, grab a [pre-built binary](https://github.com/codercom/sshcode/releases).
