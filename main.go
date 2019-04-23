@@ -55,11 +55,15 @@ func flagHelp() string {
 	return bd.String()
 }
 
+// version is overwritten by ci/build.sh.
+var version string
+
 func main() {
 	var (
 		skipSyncFlag = flag.Bool("skipsync", false, "skip syncing local settings and extensions to remote host")
 		sshFlags     = flag.String("ssh-flags", "", "custom SSH flags")
 		syncBack     = flag.Bool("b", false, "sync extensions back on termination")
+		printVersion = flag.Bool("version", false, "print version information and exit")
 	)
 
 	flag.Usage = func() {
@@ -81,6 +85,11 @@ Arguments:
 	}
 
 	flag.Parse()
+	if *printVersion {
+		fmt.Printf("%v\n", version)
+		os.Exit(0)
+	}
+
 	host := flag.Arg(0)
 
 	if host == "" {
