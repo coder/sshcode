@@ -62,8 +62,8 @@ The following will make `sshcode` work with VS Code Insiders:
 **MacOS**
 
 ```bash
-export VSCODE_CONFIG_DIR="$HOME/.config/Code - Insiders/User"
 export VSCODE_CONFIG_DIR="$HOME/Library/Application Support/Code - Insiders/User"
+export VSCODE_EXTENSIONS_DIR="$HOME/.vscode-insiders/extensions"
 ```
 
 **Linux**
