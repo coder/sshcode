@@ -133,20 +133,7 @@ chmod +x ` + codeServerPath
 	}
 
 	if !*skipSyncFlag {
-		start := time.Now()
-		flog.Info("syncing settings")
-		err = syncUserSettings(*sshFlags, host, false)
-		if err != nil {
-			flog.Fatal("failed to sync settings: %v", err)
-		}
-		flog.Info("synced settings in %s", time.Since(start))
-
-		flog.Info("syncing extensions")
-		err = syncExtensions(*sshFlags, host, false)
-		if err != nil {
-			flog.Fatal("failed to sync extensions: %v", err)
-		}
-		flog.Info("synced extensions in %s", time.Since(start))
+		syncConfigurations(sshFlags, host)
 	}
 
 	flog.Info("starting code-server...")
@@ -174,20 +161,7 @@ chmod +x ` + codeServerPath
 	url := "http://127.0.0.1:" + localPort
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	for {
-		if ctx.Err() != nil {
-			flog.Fatal("code-server didn't start in time %v", ctx.Err())
-		}
-		// Waits for code-server to be available before opening the browser.
-		r, _ := http.NewRequest("GET", url, nil)
-		r = r.WithContext(ctx)
-		resp, err := http.DefaultClient.Do(r)
-		if err != nil {
-			continue
-		}
-		resp.Body.Close()
-		break
-	}
+	waitForCodeServer(ctx, url)
 
 	ctx, cancel = context.WithCancel(context.Background())
 	openBrowser(url)
@@ -220,6 +194,39 @@ chmod +x ` + codeServerPath
 	err = syncUserSettings(*sshFlags, host, true)
 	if err != nil {
 		flog.Fatal("failed to user settigns extensions back: %v", err)
+	}
+}
+
+func syncConfigurations(sshFlags *string, host string) {
+	start := time.Now()
+	flog.Info("syncing settings")
+	err := syncUserSettings(*sshFlags, host, false)
+	if err != nil {
+		flog.Fatal("failed to sync settings: %v", err)
+	}
+	flog.Info("synced settings in %s", time.Since(start))
+	flog.Info("syncing extensions")
+	err = syncExtensions(*sshFlags, host, false)
+	if err != nil {
+		flog.Fatal("failed to sync extensions: %v", err)
+	}
+	flog.Info("synced extensions in %s", time.Since(start))
+}
+
+func waitForCodeServer(ctx context.Context, url string) {
+	for {
+		if ctx.Err() != nil {
+			flog.Fatal("code-server didn't start in time %v", ctx.Err())
+		}
+		// Waits for code-server to be available before opening the browser.
+		r, _ := http.NewRequest("GET", url, nil)
+		r = r.WithContext(ctx)
+		resp, err := http.DefaultClient.Do(r)
+		if err != nil {
+			continue
+		}
+		resp.Body.Close()
+		break
 	}
 }
 
