@@ -84,42 +84,22 @@ Arguments:
 		)
 	}
 
-	flag.Parse()
-	if *printVersion {
-		fmt.Printf("%v\n", version)
-		os.Exit(0)
-	}
-
-	host := flag.Arg(0)
-
-	if host == "" {
-		// If no host is specified output the usage.
-		flag.Usage()
-		os.Exit(1)
-	}
-
-	dir := flag.Arg(1)
-	if dir == "" {
-		dir = "~"
-	}
+	host, dir := arrangeArgs(printVersion)
 
 	flog.Info("ensuring code-server is updated...")
 
 	const codeServerPath = "/tmp/codessh-code-server"
 
 	downloadScript := `set -euxo pipefail || exit 1
-
-mkdir -p ~/.local/share/code-server
-cd ` + filepath.Dir(codeServerPath) + `
-wget -N https://codesrv-ci.cdr.sh/latest-linux
-[ -f ` + codeServerPath + ` ] && rm ` + codeServerPath + `
-ln latest-linux ` + codeServerPath + `
-chmod +x ` + codeServerPath
+	
+	mkdir -p ~/.local/share/code-server
+	cd ` + filepath.Dir(codeServerPath) + `
+	wget -N https://codesrv-ci.cdr.sh/latest-linux
+	[ -f ` + codeServerPath + ` ] && rm ` + codeServerPath + `
+	ln latest-linux ` + codeServerPath + `
+	chmod +x ` + codeServerPath
 	// Downloads the latest code-server and allows it to be executed.
-	sshCmdStr := fmt.Sprintf("ssh" +
-		" " + *sshFlags + " " +
-		host + " /bin/bash",
-	)
+	sshCmdStr := fmt.Sprintf("ssh" + " " + *sshFlags + " " + host + " /bin/bash")
 	sshCmd := exec.Command("sh", "-c", sshCmdStr)
 	sshCmd.Stdout = os.Stdout
 	sshCmd.Stderr = os.Stderr
@@ -133,20 +113,7 @@ chmod +x ` + codeServerPath
 	}
 
 	if !*skipSyncFlag {
-		start := time.Now()
-		flog.Info("syncing settings")
-		err = syncUserSettings(*sshFlags, host, false)
-		if err != nil {
-			flog.Fatal("failed to sync settings: %v", err)
-		}
-		flog.Info("synced settings in %s", time.Since(start))
-
-		flog.Info("syncing extensions")
-		err = syncExtensions(*sshFlags, host, false)
-		if err != nil {
-			flog.Fatal("failed to sync extensions: %v", err)
-		}
-		flog.Info("synced extensions in %s", time.Since(start))
+		syncConfigurations(sshFlags, host)
 	}
 
 	flog.Info("starting code-server...")
@@ -171,23 +138,10 @@ chmod +x ` + codeServerPath
 		flog.Fatal("failed to start code-server: %v", err)
 	}
 
-	url := "http://127.0.0.1:" + localPort
+	url := fmt.Sprintf("http://127.0.0.1:%v", localPort)
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	for {
-		if ctx.Err() != nil {
-			flog.Fatal("code-server didn't start in time %v", ctx.Err())
-		}
-		// Waits for code-server to be available before opening the browser.
-		r, _ := http.NewRequest("GET", url, nil)
-		r = r.WithContext(ctx)
-		resp, err := http.DefaultClient.Do(r)
-		if err != nil {
-			continue
-		}
-		resp.Body.Close()
-		break
-	}
+	waitForCodeServer(ctx, url)
 
 	ctx, cancel = context.WithCancel(context.Background())
 	openBrowser(url)
@@ -220,6 +174,68 @@ chmod +x ` + codeServerPath
 	err = syncUserSettings(*sshFlags, host, true)
 	if err != nil {
 		flog.Fatal("failed to user settigns extensions back: %v", err)
+	}
+}
+
+func arrangeArgs(printVersion *bool) (string, string) {
+	flag.Parse()
+	if *printVersion {
+		fmt.Printf("%v\n", version)
+		os.Exit(0)
+	}
+	host := flag.Arg(0)
+	if host == "" {
+		// If no host is specified output the usage.
+		flag.Usage()
+		os.Exit(1)
+	}
+	dir := flag.Arg(1)
+	if dir == "" {
+		dir = "~"
+	}
+	return host, dir
+}
+
+func createCommand(sshCmd *exec.Cmd, sshCmdStr string) *exec.Cmd {
+	sshCmd = exec.Command("sh", "-c",
+		sshCmdStr,
+	)
+	sshCmd.Stdin = os.Stdin
+	sshCmd.Stdout = os.Stdout
+	sshCmd.Stderr = os.Stderr
+	return sshCmd
+}
+
+func syncConfigurations(sshFlags *string, host string) {
+	start := time.Now()
+	flog.Info("syncing settings")
+	err := syncUserSettings(*sshFlags, host, false)
+	if err != nil {
+		flog.Fatal("failed to sync settings: %v", err)
+	}
+	flog.Info("synced settings in %s", time.Since(start))
+	flog.Info("syncing extensions")
+	err = syncExtensions(*sshFlags, host, false)
+	if err != nil {
+		flog.Fatal("failed to sync extensions: %v", err)
+	}
+	flog.Info("synced extensions in %s", time.Since(start))
+}
+
+func waitForCodeServer(ctx context.Context, url string) {
+	for {
+		if ctx.Err() != nil {
+			flog.Fatal("code-server didn't start in time %v", ctx.Err())
+		}
+		// Waits for code-server to be available before opening the browser.
+		r, _ := http.NewRequest("GET", url, nil)
+		r = r.WithContext(ctx)
+		resp, err := http.DefaultClient.Do(r)
+		if err != nil {
+			continue
+		}
+		resp.Body.Close()
+		break
 	}
 }
 
