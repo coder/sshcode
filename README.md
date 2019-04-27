@@ -28,6 +28,13 @@ go get -u go.coder.com/sshcode
 
 Or, grab a [pre-built binary](https://github.com/cdr/sshcode/releases).
 
+### OS Support
+
+We currently support:
+- Linux
+- MacOS
+- WSL
+
 ## Usage
 
 ```bash
