@@ -74,7 +74,7 @@ Environment variables:
 		`+vsCodeConfigDirEnv+`	use special VS Code settings dir.
 		`+vsCodeExtensionsDirEnv+`	use special VS Code extensions dir.
 
-More info: https://github.com/codercom/sshcode
+More info: https://github.com/cdr/sshcode
 
 Arguments:
 `+helpTab+`HOST is passed into the ssh command.
