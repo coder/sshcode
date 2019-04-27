@@ -121,14 +121,14 @@ chmod +x ` + codeServerPath
 		host + " /bin/bash",
 	)
 	sshCmd := exec.Command("sh", "-c", sshCmdStr)
-	sshCmd.Stdout = os.Stdout
-	sshCmd.Stderr = os.Stderr
 	sshCmd.Stdin = strings.NewReader(downloadScript)
-	err := sshCmd.Run()
+	output, err := sshCmd.CombinedOutput()
 	if err != nil {
-		flog.Fatal("failed to update code-server: %v\n---ssh cmd---\n%s\n---download script---\n%s", err,
+
+		flog.Fatal("failed to update code-server: %v\n---ssh cmd---\n%s\n---download script---\n%s\n---output---\n%s", err,
 			sshCmdStr,
 			downloadScript,
+			output,
 		)
 	}
 
@@ -331,7 +331,7 @@ func rsync(src string, dest string, sshFlags string, excludePaths ...string) err
 		excludeFlags[i] = "--exclude=" + path
 	}
 
-	cmd := exec.Command("rsync", append(excludeFlags, "-azvr",
+	cmd := exec.Command("rsync", append(excludeFlags, "-azr",
 		"-e", "ssh "+sshFlags,
 		// Only update newer directories, and sync times
 		// to keep things simple.
@@ -340,6 +340,7 @@ func rsync(src string, dest string, sshFlags string, excludePaths ...string) err
 		// locally in order to properly delete an extension.
 		"--delete",
 		"--copy-unsafe-links",
+		"--info=progress2",
 		src, dest,
 	)...,
 	)
