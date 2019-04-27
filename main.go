@@ -225,6 +225,12 @@ chmod +x ` + codeServerPath
 
 func openBrowser(url string) {
 	var openCmd *exec.Cmd
+
+	const (
+		macPath = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+		wslPath = "/mnt/c/Program Files (x86)/Google/Chrome/Application/chrome.exe"
+	)
+
 	switch {
 	case commandExists("google-chrome"):
 		openCmd = exec.Command("google-chrome", chromeOptions(url)...)
@@ -234,8 +240,10 @@ func openBrowser(url string) {
 		openCmd = exec.Command("chromium", chromeOptions(url)...)
 	case commandExists("chromium-browser"):
 		openCmd = exec.Command("chromium-browser", chromeOptions(url)...)
-	case pathExists("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"):
-		openCmd = exec.Command("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", chromeOptions(url)...)
+	case pathExists(macPath):
+		openCmd = exec.Command(macPath, chromeOptions(url)...)
+	case pathExists(wslPath):
+		openCmd = exec.Command(wslPath, chromeOptions(url)...)
 	default:
 		err := browser.OpenURL(url)
 		if err != nil {
