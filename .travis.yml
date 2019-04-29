@@ -1,0 +1,10 @@
+language: go
+
+go:
+- 1.12.x
+env:
+  - GO111MODULE=on
+script: 
+- ./ci/ensuremod.sh
+- ./ci/lint.sh 
+- go test -v ./...
