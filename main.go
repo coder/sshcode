@@ -6,9 +6,9 @@ import (
 	"math/rand"
 	"os"
 	"strings"
-	"text/tabwriter"
 	"time"
 
+	"go.coder.com/cli"
 	"go.coder.com/flog"
 )
 
@@ -18,44 +18,65 @@ func init() {
 
 const helpTabWidth = 5
 
-var helpTab = strings.Repeat(" ", helpTabWidth)
-
-// version is overwritten by ci/build.sh.
-var version string
+var (
+	helpTab = strings.Repeat(" ", helpTabWidth)
+	// version is overwritten by ci/build.sh.
+	version string
+)
 
 func main() {
-	var (
-		skipSyncFlag = flag.Bool("skipsync", false, "skip syncing local settings and extensions to remote host")
-		sshFlags     = flag.String("ssh-flags", "", "custom SSH flags")
-		syncBack     = flag.Bool("b", false, "sync extensions back on termination")
-		printVersion = flag.Bool("version", false, "print version information and exit")
-	)
+	cli.RunRoot(&rootCmd{})
+}
 
-	flag.Usage = usage
+var _ interface {
+	cli.Command
+	cli.FlaggedCommand
+} = new(rootCmd)
 
-	flag.Parse()
-	if *printVersion {
+type rootCmd struct {
+	skipSync     bool
+	syncBack     bool
+	printVersion bool
+	sshFlags     string
+}
+
+func (c *rootCmd) Spec() cli.CommandSpec {
+	return cli.CommandSpec{
+		Name:  "sshcode",
+		Usage: c.usage(),
+		Desc:  c.description(),
+	}
+}
+
+func (c *rootCmd) RegisterFlags(fl *flag.FlagSet) {
+	fl.BoolVar(&c.skipSync, "skipsync", false, "skip syncing local settings and extensions to remote host")
+	fl.BoolVar(&c.syncBack, "b", false, "sync extensions back on termination")
+	fl.BoolVar(&c.printVersion, "version", false, "print version information and exit")
+	fl.StringVar(&c.sshFlags, "ssh-flags", "", "custom SSH flags")
+}
+
+func (c *rootCmd) Run(fl *flag.FlagSet) {
+	if c.printVersion {
 		fmt.Printf("%v\n", version)
 		os.Exit(0)
 	}
 
-	host := flag.Arg(0)
-
+	host := fl.Arg(0)
 	if host == "" {
 		// If no host is specified output the usage.
-		flag.Usage()
+		fl.Usage()
 		os.Exit(1)
 	}
 
-	dir := flag.Arg(1)
+	dir := fl.Arg(1)
 	if dir == "" {
 		dir = "~"
 	}
 
 	err := sshCode(host, dir, options{
-		skipSync: *skipSyncFlag,
-		sshFlags: *sshFlags,
-		syncBack: *syncBack,
+		skipSync: c.skipSync,
+		sshFlags: c.sshFlags,
+		syncBack: c.syncBack,
 	})
 
 	if err != nil {
@@ -63,53 +84,25 @@ func main() {
 	}
 }
 
-func usage() {
-	fmt.Printf(`Usage: %v [FLAGS] HOST [DIR]
-Start VS Code via code-server over SSH.
+func (c *rootCmd) usage() string {
+	return "[FLAGS] HOST [DIR]"
+}
+
+func (c *rootCmd) description() string {
+	return fmt.Sprintf(`Start VS Code via code-server over SSH.
 
 Environment variables:
-		%v use special VS Code settings dir.
-		%v use special VS Code extensions dir.
+%v%v use special VS Code settings dir.
+%v%v use special VS Code extensions dir.
 
 More info: https://github.com/cdr/sshcode
 
 Arguments:
 %vHOST is passed into the ssh command. Valid formats are '<ip-address>' or 'gcp:<instance-name>'. 
-%vDIR is optional.
-
-%v`,
-		os.Args[0],
-		vsCodeConfigDirEnv,
-		vsCodeExtensionsDirEnv,
+%vDIR is optional.`,
+		helpTab, vsCodeConfigDirEnv,
+		helpTab, vsCodeExtensionsDirEnv,
 		helpTab,
 		helpTab,
-		flagHelp(),
 	)
-
-}
-
-// flagHelp generates a friendly help string for all globally registered command
-// line flags.
-func flagHelp() string {
-	var bd strings.Builder
-
-	w := tabwriter.NewWriter(&bd, 3, 10, helpTabWidth, ' ', 0)
-
-	fmt.Fprintf(w, "Flags:\n")
-	var count int
-	flag.VisitAll(func(f *flag.Flag) {
-		count++
-		if f.DefValue == "" {
-			fmt.Fprintf(w, "\t-%v\t%v\n", f.Name, f.Usage)
-		} else {
-			fmt.Fprintf(w, "\t-%v\t%v\t(%v)\n", f.Name, f.Usage, f.DefValue)
-		}
-	})
-	if count == 0 {
-		return "\n"
-	}
-
-	w.Flush()
-
-	return bd.String()
 }
