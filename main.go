@@ -74,7 +74,7 @@ Environment variables:
 More info: https://github.com/cdr/sshcode
 
 Arguments:
-%vHOST is passed into the ssh command.
+%vHOST is passed into the ssh command. Valid formats are '<ip-address>' or 'gcp:<instance-name>'. 
 %vDIR is optional.
 
 %v`,
