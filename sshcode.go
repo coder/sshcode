@@ -26,6 +26,7 @@ type options struct {
 	syncBack   bool
 	noOpen     bool
 	localPort  string
+	localHost  string
 	remotePort string
 	sshFlags   string
 }
@@ -108,8 +109,8 @@ func sshCode(host, dir string, o options) error {
 	if err != nil {
 		return xerrors.Errorf("failed to start code-server: %w", err)
 	}
-
-	url := "http://127.0.0.1:" + o.localPort
+	flog.Info("Using local host value: " + o.localHost)
+	url := "http://" + o.localHost + ":" + o.localPort
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
