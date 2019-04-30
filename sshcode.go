@@ -19,6 +19,8 @@ import (
 	"golang.org/x/xerrors"
 )
 
+const codeServerPath = "~/.cache/sshcode/sshcode-server"
+
 type options struct {
 	skipSync   bool
 	syncBack   bool
@@ -29,8 +31,6 @@ type options struct {
 
 func sshCode(host, dir string, o options) error {
 	flog.Info("ensuring code-server is updated...")
-
-	const codeServerPath = "/tmp/sshcode-code-server"
 
 	dlScript := downloadScript(codeServerPath)
 
@@ -97,7 +97,7 @@ func sshCode(host, dir string, o options) error {
 	sshCmd.Stderr = os.Stderr
 	err = sshCmd.Start()
 	if err != nil {
-		flog.Fatal("failed to start code-server: %v", err)
+		return xerrors.Errorf("failed to start code-server: %w", err)
 	}
 
 	url := "http://127.0.0.1:" + o.localPort
@@ -313,12 +313,13 @@ func downloadScript(codeServerPath string) string {
 	return fmt.Sprintf(
 		`set -euxo pipefail || exit 1
 
-mkdir -p ~/.local/share/code-server
+mkdir -p ~/.local/share/code-server %v
 cd %v
 wget -N https://codesrv-ci.cdr.sh/latest-linux
 [ -f %v ] && rm %v
 ln latest-linux %v
 chmod +x %v`,
+		filepath.Dir(codeServerPath),
 		filepath.Dir(codeServerPath),
 		codeServerPath,
 		codeServerPath,

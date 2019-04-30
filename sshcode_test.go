@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"testing"
@@ -50,7 +51,11 @@ func TestSSHCode(t *testing.T) {
 	waitForSSHCode(t, localPort, time.Second*30)
 	waitForSSHCode(t, remotePort, time.Second*30)
 
-	out, err := exec.Command("pkill", "sshcode-code").CombinedOutput()
+	// Typically we'd do an os.Stat call here but the os package doesn't expand '~'
+	out, err := exec.Command("sh", "-c", "stat "+codeServerPath).CombinedOutput()
+	require.NoError(t, err, "%s", out)
+
+	out, err = exec.Command("pkill", filepath.Base(codeServerPath)).CombinedOutput()
 	require.NoError(t, err, "%s", out)
 
 	wg.Wait()
