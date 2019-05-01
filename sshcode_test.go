@@ -261,7 +261,7 @@ func waitForSSHCode(t *testing.T, port string, timeout time.Duration) {
 	}
 }
 
-// fakeRSAKey isn't used for anything other than the trashh ssh
+// fakeRSAKey isn't used for anything other than the trassh ssh
 // server.
 const fakeRSAKey = `-----BEGIN RSA PRIVATE KEY-----
 MIIEpQIBAAKCAQEAsbbGAxPQeqti2OgdzuMgJGBAwXe/bFhQTPuk0bIvavkZwX/a
