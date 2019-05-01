@@ -17,6 +17,8 @@ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/testify v1.1.4/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
+go.coder.com/cli v0.1.0 h1:ZAjpjXJxMnwj1TqXUi7nnXXuxiPRfwfoC2kViN93oMM=
+go.coder.com/cli v0.1.0/go.mod h1:pbVagI9YH/HHMManxPFML4P527GDREwsb+yciZ7mtB8=
 go.coder.com/flog v0.0.0-20190129195112-eaed154a0db8 h1:PtQ3moPi4EAz3cyQhkUs1IGIXa2QgJpP60yMjOdu0kk=
 go.coder.com/flog v0.0.0-20190129195112-eaed154a0db8/go.mod h1:83JsYgXYv0EOaXjIMnaZ1Fl6ddNB3fJnDZ/8845mUJ8=
 go.coder.com/retry v0.0.0-20180926062817-cf12c95974ac h1:ekdpsuykRy/E+SDq5BquFomNhRCk8OOyhtnACW9Bi50=
