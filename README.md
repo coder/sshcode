@@ -4,6 +4,7 @@
 [!["Latest Release"](https://img.shields.io/github/release/cdr/sshcode.svg)](https://github.com/cdr/sshcode/releases/latest)
 [![MIT license](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/cdr/sshcode/blob/master/LICENSE)
 [![Discord](https://img.shields.io/discord/463752820026376202.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/zxSwN8Z)
+[![Build Status](https://travis-ci.org/cdr/sshcode.svg?branch=master)](https://travis-ci.org/cdr/sshcode)
 
 `sshcode` is a CLI to automatically install and run [code-server](https://github.com/cdr/code-server) over SSH.
 
