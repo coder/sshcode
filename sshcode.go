@@ -32,7 +32,7 @@ type options struct {
 func sshCode(host, dir string, o options) error {
 	flog.Info("ensuring code-server is updated...")
 
-	host, extraSSHFlags, err := parseIP(host)
+	host, extraSSHFlags, err := parseHost(host)
 	if err != nil {
 		return xerrors.Errorf("failed to parse host IP: %w", err)
 	}
@@ -350,19 +350,17 @@ func ensureDir(path string) error {
 	return nil
 }
 
-// parseIP parses the host to a valid IP address. If 'gcp:' is prefixed to the
+// parseHost parses the host argument. If 'gcp:' is prefixed to the
 // host then a lookup is done using gcloud to determine the external IP and any
-// additional SSH arguments that should be used for ssh commands.
-func parseIP(host string) (ip string, additionalFlags string, err error) {
+// additional SSH arguments that should be used for ssh commands. Otherwise, host
+// is returned.
+func parseHost(host string) (parsedHost string, additionalFlags string, err error) {
 	host = strings.TrimSpace(host)
 	switch {
 	case strings.HasPrefix(host, "gcp:"):
 		instance := strings.TrimPrefix(host, "gcp:")
 		return parseGCPSSHCmd(instance)
 	default:
-		if net.ParseIP(host) == nil {
-			return "", "", xerrors.New("host argument is not a valid IP address")
-		}
 		return host, "", nil
 	}
 }
