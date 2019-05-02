@@ -40,7 +40,7 @@ func TestSSHCode(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := sshCode("127.0.0.1", "", options{
+		err := sshCode("foo@127.0.0.1", "", options{
 			sshFlags:   testSSHArgs(sshPort),
 			localPort:  localPort,
 			remotePort: remotePort,
