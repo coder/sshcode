@@ -321,12 +321,14 @@ func downloadScript(codeServerPath string) string {
 	return fmt.Sprintf(
 		`set -euxo pipefail || exit 1
 
+pkill -f %v || true
 mkdir -p ~/.local/share/code-server %v
 cd %v
 wget -N https://codesrv-ci.cdr.sh/latest-linux
 [ -f %v ] && rm %v
 ln latest-linux %v
 chmod +x %v`,
+		codeServerPath,
 		filepath.Dir(codeServerPath),
 		filepath.Dir(codeServerPath),
 		codeServerPath,
