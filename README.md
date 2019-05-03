@@ -86,3 +86,18 @@ export VSCODE_EXTENSIONS_DIR="$HOME/.vscode-insiders/extensions"
 By default, VS Code changes on the remote server won't be synced back
 when the connection closes. To synchronize back to local when the connection ends,
 pass the `-b` flag.
+
+
+### Auto open in browser trouble shooting
+
+sshcode detects if you're under GUI mode via checking environment variable `DISPLAY`.
+If `DISPLAY` is not empty, then it will try to open romote vscode url in browser app mode.
+
+But the `DISPLAY` environment variable will only be set with X-Window installed.
+
+For OS doesn't have X-Window installed (e.g.: MacOS),
+export following environment variable for enabling auto open in browser feature.
+
+```bash
+export DISPLAY=":0"
+```
