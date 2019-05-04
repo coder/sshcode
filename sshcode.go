@@ -24,6 +24,7 @@ const codeServerPath = "~/.cache/sshcode/sshcode-server"
 type options struct {
 	skipSync   bool
 	syncBack   bool
+	noOpen     bool
 	localPort  string
 	remotePort string
 	sshFlags   string
@@ -130,7 +131,7 @@ func sshCode(host, dir string, o options) error {
 
 	ctx, cancel = context.WithCancel(context.Background())
 
-	if os.Getenv("DISPLAY") != "" {
+	if !o.noOpen {
 		openBrowser(url)
 	}
 

@@ -6,7 +6,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
@@ -20,10 +19,6 @@ import (
 )
 
 func TestSSHCode(t *testing.T) {
-	// Avoid opening a browser window.
-	err := os.Unsetenv("DISPLAY")
-	require.NoError(t, err)
-
 	sshPort, err := randomPort()
 	require.NoError(t, err)
 
@@ -44,6 +39,7 @@ func TestSSHCode(t *testing.T) {
 			sshFlags:   testSSHArgs(sshPort),
 			localPort:  localPort,
 			remotePort: remotePort,
+			noOpen:     true,
 		})
 		require.NoError(t, err)
 	}()
