@@ -25,7 +25,6 @@ type options struct {
 	skipSync   bool
 	syncBack   bool
 	localPort  string
-	localHost  string
 	remotePort string
 	sshFlags   string
 }
