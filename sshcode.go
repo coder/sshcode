@@ -87,9 +87,11 @@ func sshCode(host, dir string, o options) error {
 
 	flog.Info("Tunneling local port %v to remote port %v", o.localPort, o.remotePort)
 
-	sshCmdStr = fmt.Sprintf("ssh -tt -q -L %v %v %v 'cd %v; %v --host 127.0.0.1 --allow-http --no-auth --port=%v'",
-		o.localPort+":localhost:"+o.remotePort, o.sshFlags, host, dir, codeServerPath, o.remotePort,
-	)
+	sshCmdStr =
+
+		fmt.Sprintf("ssh -tt -q -L %v %v %v 'cd %v; %v --host $(lsb_release -a | grep 'Gentoo' | [ ! -t 0 ] && echo '0.0.0.0' || echo '127.0.0.1') --allow-http --no-auth --port=%v'",
+			o.localPort+":localhost:"+o.remotePort, o.sshFlags, host, dir, codeServerPath, o.remotePort,
+		)
 
 	// Starts code-server and forwards the remote port.
 	sshCmd = exec.Command("sh", "-c", sshCmdStr)
@@ -100,8 +102,8 @@ func sshCode(host, dir string, o options) error {
 	if err != nil {
 		return xerrors.Errorf("failed to start code-server: %w", err)
 	}
-	flog.Info("Using local host value: " + o.localHost)
-	url := "http://" + o.localHost + ":" + o.localPort
+
+	url := "http://127.0.0.1:" + o.localPort
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
