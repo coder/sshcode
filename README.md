@@ -46,7 +46,7 @@ sshcode kyle@dev.kwc.io
 You can specify a remote directory as the second argument:
 
 ```bash
-sshcode kyle@dev.kwc.io ~/projects/sourcegraph
+sshcode kyle@dev.kwc.io "~/projects/sourcegraph"
 ```
 
 ## Extensions & Settings Sync
