@@ -29,6 +29,7 @@ func main() {
 		sshFlags     = flag.String("ssh-flags", "", "custom SSH flags")
 		syncBack     = flag.Bool("b", false, "sync extensions back on termination")
 		bindFlag     = flag.String("bind", "127.0.0.1", "local bind address for ssh tunnel")
+		localPort    = flag.String("local-port", "", "local port to bind to")
 		printVersion = flag.Bool("version", false, "print version information and exit")
 	)
 
@@ -56,6 +57,7 @@ func main() {
 	err := sshCode(host, dir, options{
 		skipSync:   *skipSyncFlag,
 		sshFlags:   *sshFlags,
+		localPort:  *localPort,
 		remoteHost: *bindFlag,
 		syncBack:   *syncBack,
 	})
