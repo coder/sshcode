@@ -25,6 +25,7 @@ type options struct {
 	skipSync   bool
 	syncBack   bool
 	localPort  string
+	remoteHost string
 	remotePort string
 	sshFlags   string
 }
@@ -86,10 +87,12 @@ func sshCode(host, dir string, o options) error {
 
 	flog.Info("Tunneling local port %v to remote port %v", o.localPort, o.remotePort)
 
+	if o.remoteHost != "127.0.0.1" {
+		flog.Info("Binding remote to %v", o.remoteHost)
+	}
 	sshCmdStr =
-
-		fmt.Sprintf("ssh -tt -q -L %v %v %v 'cd %v; %v --host $(lsb_release -a | grep 'Gentoo' | [ ! -t 0 ] && echo '0.0.0.0' || echo '127.0.0.1') --allow-http --no-auth --port=%v'",
-			o.localPort+":localhost:"+o.remotePort, o.sshFlags, host, dir, codeServerPath, o.remotePort,
+		fmt.Sprintf("ssh -tt -q -L %v %v %v 'cd %v; %v --host %v --allow-http --no-auth --port=%v'",
+			o.localPort+":localhost:"+o.remotePort, o.sshFlags, host, dir, codeServerPath, o.remoteHost, o.remotePort,
 		)
 
 	// Starts code-server and forwards the remote port.

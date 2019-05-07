@@ -28,6 +28,7 @@ func main() {
 		skipSyncFlag = flag.Bool("skipsync", false, "skip syncing local settings and extensions to remote host")
 		sshFlags     = flag.String("ssh-flags", "", "custom SSH flags")
 		syncBack     = flag.Bool("b", false, "sync extensions back on termination")
+		bindFlag     = flag.String("bind", "127.0.0.1", "local bind address for ssh tunnel")
 		printVersion = flag.Bool("version", false, "print version information and exit")
 	)
 
@@ -53,9 +54,10 @@ func main() {
 	}
 
 	err := sshCode(host, dir, options{
-		skipSync: *skipSyncFlag,
-		sshFlags: *sshFlags,
-		syncBack: *syncBack,
+		skipSync:   *skipSyncFlag,
+		sshFlags:   *sshFlags,
+		remoteHost: *bindFlag,
+		syncBack:   *syncBack,
 	})
 
 	if err != nil {
