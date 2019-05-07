@@ -187,7 +187,6 @@ func parseBindAddr(bindAddr string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	return net.JoinHostPort(host, port), nil
 }
 
