@@ -26,7 +26,7 @@ type options struct {
 	syncBack   bool
 	noOpen     bool
 	localPort  string
-	remoteHost string
+	bindHost   string
 	remotePort string
 	sshFlags   string
 }
@@ -96,12 +96,12 @@ func sshCode(host, dir string, o options) error {
 
 	flog.Info("Tunneling local port %v to remote port %v", o.localPort, o.remotePort)
 
-	if o.remoteHost != "127.0.0.1" {
-		flog.Info("Binding remote to %v", o.remoteHost)
+	if o.bindHost != "127.0.0.1" {
+		flog.Info("Binding remote to %v", o.bindHost)
 	}
 	sshCmdStr =
-		fmt.Sprintf("ssh -tt -q -L %v %v %v 'cd %v; %v --host %v --allow-http --no-auth --port=%v'",
-			o.localPort+":localhost:"+o.remotePort, o.sshFlags, host, dir, codeServerPath, o.remoteHost, o.remotePort,
+		fmt.Sprintf("ssh -tt -q -L %v:%v:localhost:%v %v %v 'cd %v; %v --host 127.0.0.1 --allow-http --no-auth --port=%v'",
+			o.bindHost, o.localPort, o.remotePort, o.sshFlags, host, dir, codeServerPath, o.remotePort,
 		)
 
 	// Starts code-server and forwards the remote port.
@@ -114,7 +114,7 @@ func sshCode(host, dir string, o options) error {
 		return xerrors.Errorf("failed to start code-server: %w", err)
 	}
 
-	url := "http://127.0.0.1:" + o.localPort
+	url := fmt.Sprintf("http://127.0.0.1:%s", o.localPort)
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
