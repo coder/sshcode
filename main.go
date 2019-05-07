@@ -39,7 +39,6 @@ type rootCmd struct {
 	printVersion bool
 	noOpen       bool
 	bindFlag     string
-	localPort    string
 	sshFlags     string
 }
 
@@ -57,7 +56,6 @@ func (c *rootCmd) RegisterFlags(fl *flag.FlagSet) {
 	fl.BoolVar(&c.printVersion, "version", false, "print version information and exit")
 	fl.BoolVar(&c.noOpen, "no-open", false, "do not open web browser")
 	fl.StringVar(&c.bindFlag, "bind", "127.0.0.1", "local bind address for ssh tunnel")
-	fl.StringVar(&c.localPort, "local-port", "", "local forwarded port for code-server")
 	fl.StringVar(&c.sshFlags, "ssh-flags", "", "custom SSH flags")
 }
 
@@ -80,12 +78,11 @@ func (c *rootCmd) Run(fl *flag.FlagSet) {
 	}
 
 	err := sshCode(host, dir, options{
-		skipSync:  c.skipSync,
-		sshFlags:  c.sshFlags,
-		bindHost:  c.bindFlag,
-		noOpen:    c.noOpen,
-		localPort: c.localPort,
-		syncBack:  c.syncBack,
+		skipSync: c.skipSync,
+		sshFlags: c.sshFlags,
+		bindHost: c.bindFlag,
+		noOpen:   c.noOpen,
+		syncBack: c.syncBack,
 	})
 
 	if err != nil {

@@ -25,8 +25,8 @@ type options struct {
 	skipSync   bool
 	syncBack   bool
 	noOpen     bool
-	localPort  string
 	bindHost   string
+	localPort  string
 	remotePort string
 	sshFlags   string
 }
@@ -80,12 +80,19 @@ func sshCode(host, dir string, o options) error {
 
 	flog.Info("starting code-server...")
 
+	splitHost := strings.Split(o.bindHost, ":")
+	if len(splitHost) == 2 {
+		o.localPort = splitHost[1]
+	}
+
 	if o.localPort == "" {
 		o.localPort, err = randomPort()
 	}
+
 	if err != nil {
 		return xerrors.Errorf("failed to find available local port: %w", err)
 	}
+	o.bindHost = fmt.Sprintf("%s:%s", o.bindHost, o.localPort)
 
 	if o.remotePort == "" {
 		o.remotePort, err = randomPort()
@@ -94,14 +101,11 @@ func sshCode(host, dir string, o options) error {
 		return xerrors.Errorf("failed to find available remote port: %w", err)
 	}
 
-	flog.Info("Tunneling local port %v to remote port %v", o.localPort, o.remotePort)
+	flog.Info("Tunneling local host %v to remote port %v", o.bindHost, o.remotePort)
 
-	if o.bindHost != "127.0.0.1" {
-		flog.Info("Binding remote to %v", o.bindHost)
-	}
 	sshCmdStr =
-		fmt.Sprintf("ssh -tt -q -L %v:%v:localhost:%v %v %v 'cd %v; %v --host 127.0.0.1 --allow-http --no-auth --port=%v'",
-			o.bindHost, o.localPort, o.remotePort, o.sshFlags, host, dir, codeServerPath, o.remotePort,
+		fmt.Sprintf("ssh -tt -q -L %v:localhost:%v %v %v 'cd %v; %v --host 127.0.0.1 --allow-http --no-auth --port=%v'",
+			o.bindHost, o.remotePort, o.sshFlags, host, dir, codeServerPath, o.remotePort,
 		)
 
 	// Starts code-server and forwards the remote port.
