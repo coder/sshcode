@@ -37,7 +37,7 @@ func TestSSHCode(t *testing.T) {
 		defer wg.Done()
 		err := sshCode("foo@127.0.0.1", "", options{
 			sshFlags:   testSSHArgs(sshPort),
-			bindAddr:   fmt.Sprintf("127.0.0.1:%v", localPort),
+			bindAddr:   net.JoinHostPort("127.0.0.1", localPort),
 			remotePort: remotePort,
 			noOpen:     true,
 		})

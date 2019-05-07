@@ -79,19 +79,9 @@ func sshCode(host, dir string, o options) error {
 
 	flog.Info("starting code-server...")
 
-	var bindHost string
-	var bindPort string
-	bindHost, bindPort, err = net.SplitHostPort(o.bindAddr)
-
+	o.bindAddr, err = parseBindAddr(o.bindAddr)
 	if err != nil {
 		return xerrors.Errorf("failed to parse bind address: %w", err)
-	}
-	if bindPort == "" {
-		bindPort, err = randomPort()
-	}
-
-	if err != nil {
-		return xerrors.Errorf("failed to find available local port: %w", err)
 	}
 
 	if o.remotePort == "" {
@@ -101,11 +91,11 @@ func sshCode(host, dir string, o options) error {
 		return xerrors.Errorf("failed to find available remote port: %w", err)
 	}
 
-	flog.Info("Tunneling local host %v:%v to remote port %v", bindHost, bindPort, o.remotePort)
+	flog.Info("Tunneling remote port %v to %v", o.remotePort, o.bindAddr)
 
 	sshCmdStr =
-		fmt.Sprintf("ssh -tt -q -L %v:%v:localhost:%v %v %v 'cd %v; %v --host 127.0.0.1 --allow-http --no-auth --port=%v'",
-			bindHost, bindPort, o.remotePort, o.sshFlags, host, dir, codeServerPath, o.remotePort,
+		fmt.Sprintf("ssh -tt -q -L %v:localhost:%v %v %v 'cd %v; %v --host 127.0.0.1 --allow-http --no-auth --port=%v'",
+			o.bindAddr, o.remotePort, o.sshFlags, host, dir, codeServerPath, o.remotePort,
 		)
 
 	// Starts code-server and forwards the remote port.
@@ -175,6 +165,23 @@ func sshCode(host, dir string, o options) error {
 	}
 
 	return nil
+}
+
+func parseBindAddr(bindAddr string) (string, error) {
+	host, port, err := net.SplitHostPort(bindAddr)
+	if err != nil {
+		return "", err
+	}
+	if host == "" {
+		host = "127.0.0.1"
+	}
+	if port == "" {
+		port, err = randomPort()
+	}
+	if err != nil {
+		return "", err
+	}
+	return net.JoinHostPort(host, port), nil
 }
 
 func openBrowser(url string) {
