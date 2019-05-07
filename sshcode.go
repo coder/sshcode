@@ -25,8 +25,7 @@ type options struct {
 	skipSync   bool
 	syncBack   bool
 	noOpen     bool
-	bindHost   string
-	localPort  string
+	bindAddr   string
 	remotePort string
 	sshFlags   string
 }
@@ -80,19 +79,20 @@ func sshCode(host, dir string, o options) error {
 
 	flog.Info("starting code-server...")
 
-	splitHost := strings.Split(o.bindHost, ":")
-	if len(splitHost) == 2 {
-		o.localPort = splitHost[1]
-	}
+	var bindHost string
+	var bindPort string
+	bindHost, bindPort, err = net.SplitHostPort(o.bindAddr)
 
-	if o.localPort == "" {
-		o.localPort, err = randomPort()
+	if err != nil {
+		return xerrors.Errorf("failed to parse bind address: %w", err)
+	}
+	if bindPort == "" {
+		bindPort, err = randomPort()
 	}
 
 	if err != nil {
 		return xerrors.Errorf("failed to find available local port: %w", err)
 	}
-	o.bindHost = fmt.Sprintf("%s:%s", o.bindHost, o.localPort)
 
 	if o.remotePort == "" {
 		o.remotePort, err = randomPort()
@@ -101,11 +101,11 @@ func sshCode(host, dir string, o options) error {
 		return xerrors.Errorf("failed to find available remote port: %w", err)
 	}
 
-	flog.Info("Tunneling local host %v to remote port %v", o.bindHost, o.remotePort)
+	flog.Info("Tunneling local host %v:%v to remote port %v", bindHost, bindPort, o.remotePort)
 
 	sshCmdStr =
-		fmt.Sprintf("ssh -tt -q -L %v:localhost:%v %v %v 'cd %v; %v --host 127.0.0.1 --allow-http --no-auth --port=%v'",
-			o.bindHost, o.remotePort, o.sshFlags, host, dir, codeServerPath, o.remotePort,
+		fmt.Sprintf("ssh -tt -q -L %v:%v:localhost:%v %v %v 'cd %v; %v --host 127.0.0.1 --allow-http --no-auth --port=%v'",
+			bindHost, bindPort, o.remotePort, o.sshFlags, host, dir, codeServerPath, o.remotePort,
 		)
 
 	// Starts code-server and forwards the remote port.
@@ -118,7 +118,7 @@ func sshCode(host, dir string, o options) error {
 		return xerrors.Errorf("failed to start code-server: %w", err)
 	}
 
-	url := fmt.Sprintf("http://127.0.0.1:%s", o.localPort)
+	url := fmt.Sprintf("http://%s", o.bindAddr)
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
