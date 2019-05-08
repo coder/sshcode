@@ -79,7 +79,6 @@ func (c *rootCmd) Run(fl *flag.FlagSet) {
 		skipSync: c.skipSync,
 		sshFlags: c.sshFlags,
 		bindAddr: c.bindAddr,
-		noOpen:   c.noOpen,
 		syncBack: c.syncBack,
 	})
 
