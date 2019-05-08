@@ -25,7 +25,7 @@ type options struct {
 	skipSync   bool
 	syncBack   bool
 	noOpen     bool
-	localPort  string
+	bindAddr   string
 	remotePort string
 	sshFlags   string
 }
@@ -79,11 +79,9 @@ func sshCode(host, dir string, o options) error {
 
 	flog.Info("starting code-server...")
 
-	if o.localPort == "" {
-		o.localPort, err = randomPort()
-	}
+	o.bindAddr, err = parseBindAddr(o.bindAddr)
 	if err != nil {
-		return xerrors.Errorf("failed to find available local port: %w", err)
+		return xerrors.Errorf("failed to parse bind address: %w", err)
 	}
 
 	if o.remotePort == "" {
@@ -93,11 +91,12 @@ func sshCode(host, dir string, o options) error {
 		return xerrors.Errorf("failed to find available remote port: %w", err)
 	}
 
-	flog.Info("Tunneling local port %v to remote port %v", o.localPort, o.remotePort)
+	flog.Info("Tunneling remote port %v to %v", o.remotePort, o.bindAddr)
 
-	sshCmdStr = fmt.Sprintf("ssh -tt -q -L %v %v %v 'cd %v; %v --host 127.0.0.1 --allow-http --no-auth --port=%v'",
-		o.localPort+":localhost:"+o.remotePort, o.sshFlags, host, dir, codeServerPath, o.remotePort,
-	)
+	sshCmdStr =
+		fmt.Sprintf("ssh -tt -q -L %v:localhost:%v %v %v 'cd %v; %v --host 127.0.0.1 --allow-http --no-auth --port=%v'",
+			o.bindAddr, o.remotePort, o.sshFlags, host, dir, codeServerPath, o.remotePort,
+		)
 
 	// Starts code-server and forwards the remote port.
 	sshCmd = exec.Command("sh", "-c", sshCmdStr)
@@ -109,7 +108,7 @@ func sshCode(host, dir string, o options) error {
 		return xerrors.Errorf("failed to start code-server: %w", err)
 	}
 
-	url := "http://127.0.0.1:" + o.localPort
+	url := fmt.Sprintf("http://%s", o.bindAddr)
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
@@ -166,6 +165,23 @@ func sshCode(host, dir string, o options) error {
 	}
 
 	return nil
+}
+
+func parseBindAddr(bindAddr string) (string, error) {
+	host, port, err := net.SplitHostPort(bindAddr)
+	if err != nil {
+		return "", err
+	}
+	if host == "" {
+		host = "127.0.0.1"
+	}
+	if port == "" {
+		port, err = randomPort()
+	}
+	if err != nil {
+		return "", err
+	}
+	return net.JoinHostPort(host, port), nil
 }
 
 func openBrowser(url string) {
