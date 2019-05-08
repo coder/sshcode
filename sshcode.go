@@ -41,6 +41,18 @@ func sshCode(host, dir string, o options) error {
 		o.sshFlags = strings.Join([]string{extraSSHFlags, o.sshFlags}, " ")
 	}
 
+	o.bindAddr, err = parseBindAddr(o.bindAddr)
+	if err != nil {
+		return xerrors.Errorf("failed to parse bind address: %w", err)
+	}
+
+	if o.remotePort == "" {
+		o.remotePort, err = randomPort()
+	}
+	if err != nil {
+		return xerrors.Errorf("failed to find available remote port: %w", err)
+	}
+
 	dlScript := downloadScript(codeServerPath)
 
 	// Downloads the latest code-server and allows it to be executed.
@@ -78,18 +90,6 @@ func sshCode(host, dir string, o options) error {
 	}
 
 	flog.Info("starting code-server...")
-
-	o.bindAddr, err = parseBindAddr(o.bindAddr)
-	if err != nil {
-		return xerrors.Errorf("failed to parse bind address: %w", err)
-	}
-
-	if o.remotePort == "" {
-		o.remotePort, err = randomPort()
-	}
-	if err != nil {
-		return xerrors.Errorf("failed to find available remote port: %w", err)
-	}
 
 	flog.Info("Tunneling remote port %v to %v", o.remotePort, o.bindAddr)
 
@@ -168,19 +168,26 @@ func sshCode(host, dir string, o options) error {
 }
 
 func parseBindAddr(bindAddr string) (string, error) {
+	if bindAddr == "" {
+		bindAddr = ":"
+	}
+
 	host, port, err := net.SplitHostPort(bindAddr)
 	if err != nil {
 		return "", err
 	}
+
 	if host == "" {
 		host = "127.0.0.1"
 	}
+
 	if port == "" {
 		port, err = randomPort()
 	}
 	if err != nil {
 		return "", err
 	}
+
 	return net.JoinHostPort(host, port), nil
 }
 
