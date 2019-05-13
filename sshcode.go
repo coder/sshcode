@@ -348,8 +348,8 @@ func downloadScript(codeServerPath string) string {
 pkill -f %v || true
 mkdir -p ~/.local/share/code-server %v
 cd %v
-wget -N https://codesrv-ci.cdr.sh/latest-linux
 [ -f %v ] && rm %v
+wget https://codesrv-ci.cdr.sh/latest-linux
 ln latest-linux %v
 chmod +x %v`,
 		codeServerPath,
