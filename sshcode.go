@@ -56,9 +56,9 @@ func sshCode(host, dir string, o options) error {
 	dlScript := downloadScript(codeServerPath)
 
 	// Downloads the latest code-server and allows it to be executed.
-	sshCmdStr := fmt.Sprintf("ssh %v %v /bin/bash", o.sshFlags, host)
+	sshCmdStr := fmt.Sprintf("ssh %v %v /bin/bash -l", o.sshFlags, host)
 
-	sshCmd := exec.Command("sh", "-c", sshCmdStr)
+	sshCmd := exec.Command("sh", "-l", "-c", sshCmdStr)
 	sshCmd.Stdout = os.Stdout
 	sshCmd.Stderr = os.Stderr
 	sshCmd.Stdin = strings.NewReader(dlScript)
@@ -353,8 +353,8 @@ wget -N https://codesrv-ci.cdr.sh/latest-linux
 ln latest-linux %v
 chmod +x %v`,
 		codeServerPath,
-		filepath.Dir(codeServerPath),
-		filepath.Dir(codeServerPath),
+		filepath.ToSlash(filepath.Dir(codeServerPath)),
+		filepath.ToSlash(filepath.Dir(codeServerPath)),
 		codeServerPath,
 		codeServerPath,
 		codeServerPath,
