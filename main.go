@@ -34,11 +34,12 @@ var _ interface {
 } = new(rootCmd)
 
 type rootCmd struct {
-	skipSync     bool
-	syncBack     bool
-	printVersion bool
-	bindAddr     string
-	sshFlags     string
+	skipSync          bool
+	syncBack          bool
+	printVersion      bool
+	noReuseConnection bool
+	bindAddr          string
+	sshFlags          string
 }
 
 func (c *rootCmd) Spec() cli.CommandSpec {
@@ -53,6 +54,7 @@ func (c *rootCmd) RegisterFlags(fl *flag.FlagSet) {
 	fl.BoolVar(&c.skipSync, "skipsync", false, "skip syncing local settings and extensions to remote host")
 	fl.BoolVar(&c.syncBack, "b", false, "sync extensions back on termination")
 	fl.BoolVar(&c.printVersion, "version", false, "print version information and exit")
+	fl.BoolVar(&c.noReuseConnection, "no-reuse-connection", false, "do not reuse SSH connection via control socket")
 	fl.StringVar(&c.bindAddr, "bind", "", "local bind address for ssh tunnel")
 	fl.StringVar(&c.sshFlags, "ssh-flags", "", "custom SSH flags")
 }
@@ -76,10 +78,11 @@ func (c *rootCmd) Run(fl *flag.FlagSet) {
 	}
 
 	err := sshCode(host, dir, options{
-		skipSync: c.skipSync,
-		sshFlags: c.sshFlags,
-		bindAddr: c.bindAddr,
-		syncBack: c.syncBack,
+		skipSync:          c.skipSync,
+		sshFlags:          c.sshFlags,
+		bindAddr:          c.bindAddr,
+		syncBack:          c.syncBack,
+		noReuseConnection: c.noReuseConnection,
 	})
 
 	if err != nil {
@@ -101,7 +104,7 @@ Environment variables:
 More info: https://github.com/cdr/sshcode
 
 Arguments:
-%vHOST is passed into the ssh command. Valid formats are '<ip-address>' or 'gcp:<instance-name>'. 
+%vHOST is passed into the ssh command. Valid formats are '<ip-address>' or 'gcp:<instance-name>'.
 %vDIR is optional.`,
 		helpTab, vsCodeConfigDirEnv,
 		helpTab, vsCodeExtensionsDirEnv,

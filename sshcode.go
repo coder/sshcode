@@ -20,14 +20,16 @@ import (
 )
 
 const codeServerPath = "~/.cache/sshcode/sshcode-server"
+const sshControlPath = "~/.ssh/control-%h-%p-%r"
 
 type options struct {
-	skipSync   bool
-	syncBack   bool
-	noOpen     bool
-	bindAddr   string
-	remotePort string
-	sshFlags   string
+	skipSync          bool
+	syncBack          bool
+	noOpen            bool
+	noReuseConnection bool
+	bindAddr          string
+	remotePort        string
+	sshFlags          string
 }
 
 func sshCode(host, dir string, o options) error {
@@ -51,6 +53,41 @@ func sshCode(host, dir string, o options) error {
 	}
 	if err != nil {
 		return xerrors.Errorf("failed to find available remote port: %w", err)
+	}
+
+	// Start SSH master connection socket. This prevents multiple password prompts from appearing as authentication
+	// only happens on the initial connection.
+	var sshMasterCmd *exec.Cmd
+	if !o.noReuseConnection {
+		newSSHFlags := fmt.Sprintf(`%v -o "ControlPath=%v"`, o.sshFlags, sshControlPath)
+
+		// -MN means "start a master socket and don't open a session, just connect".
+		sshMasterCmdStr := fmt.Sprintf(`ssh %v -MN %v`, newSSHFlags, host)
+		sshMasterCmd = exec.Command("sh", "-c", sshMasterCmdStr)
+		sshMasterCmd.Stdin = os.Stdin
+		sshMasterCmd.Stdout = os.Stdout
+		sshMasterCmd.Stderr = os.Stderr
+		err = sshMasterCmd.Start()
+		if err != nil {
+			flog.Error("failed to start SSH master connection, disabling connection reuse feature: %v", err)
+			o.noReuseConnection = true
+		} else {
+			// Wait for master to be ready.
+			err = checkSSHMaster(newSSHFlags, host)
+			if err != nil {
+				flog.Error("SSH master failed to start in time, disabling connection reuse feature: %v", err)
+				o.noReuseConnection = true
+				if sshMasterCmd.Process != nil {
+					err = sshMasterCmd.Process.Kill()
+					if err != nil {
+						flog.Error("failed to kill SSH master connection, ignoring: %v", err)
+					}
+				}
+			} else {
+				sshMasterCmd.Stdin = nil
+				o.sshFlags = newSSHFlags
+			}
+		}
 	}
 
 	dlScript := downloadScript(codeServerPath)
@@ -146,22 +183,39 @@ func sshCode(host, dir string, o options) error {
 	case <-ctx.Done():
 	case <-c:
 	}
+	flog.Info("exiting")
 
-	if !o.syncBack || o.skipSync {
-		flog.Info("shutting down")
-		return nil
+	if o.syncBack && !o.skipSync {
+		flog.Info("synchronizing VS Code back to local")
+
+		err = syncExtensions(o.sshFlags, host, true)
+		if err != nil {
+			flog.Error("failed to sync extensions back: %v", err)
+		}
+
+		err = syncUserSettings(o.sshFlags, host, true)
+		if err != nil {
+			flog.Error("failed to sync user settings settings back: %v", err)
+		}
 	}
 
-	flog.Info("synchronizing VS Code back to local")
-
-	err = syncExtensions(o.sshFlags, host, true)
-	if err != nil {
-		return xerrors.Errorf("failed to sync extensions back: %w", err)
-	}
-
-	err = syncUserSettings(o.sshFlags, host, true)
-	if err != nil {
-		return xerrors.Errorf("failed to sync user settings settings back: %w", err)
+	// Kill the master connection if we made one.
+	if !o.noReuseConnection {
+		// Try using the -O exit syntax first before killing the master.
+		sshCmdStr = fmt.Sprintf(`ssh %v -O exit %v`, o.sshFlags, host)
+		sshCmd = exec.Command("sh", "-c", sshCmdStr)
+		sshCmd.Stdout = os.Stdout
+		sshCmd.Stderr = os.Stderr
+		err = sshCmd.Run()
+		if err != nil {
+			flog.Error("failed to gracefully stop SSH master connection, killing: %v", err)
+			if sshMasterCmd.Process != nil {
+				err = sshMasterCmd.Process.Kill()
+				if err != nil {
+					flog.Error("failed to kill SSH master connection, ignoring: %v", err)
+				}
+			}
+		}
 	}
 
 	return nil
@@ -261,6 +315,26 @@ func randomPort() (string, error) {
 	}
 
 	return "", xerrors.Errorf("max number of tries exceeded: %d", maxTries)
+}
+
+// checkSSHMaster polls every second for 30 seconds to check if the SSH master
+// is ready.
+func checkSSHMaster(sshFlags string, host string) (err error) {
+	maxTries := 30
+	check := func() error {
+		sshCmdStr := fmt.Sprintf(`ssh %v -O check %v`, sshFlags, host)
+		sshCmd := exec.Command("sh", "-c", sshCmdStr)
+		return sshCmd.Run()
+	}
+
+	for i := 0; i < maxTries; i++ {
+		err = check()
+		if err == nil {
+			return nil
+		}
+		time.Sleep(time.Second)
+	}
+	return err
 }
 
 func syncUserSettings(sshFlags string, host string, back bool) error {
