@@ -11,8 +11,8 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
-	"syscall"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/pkg/browser"
@@ -67,9 +67,13 @@ func sshCode(host, dir string, o options) error {
 		sshMasterCmd.Stdin = os.Stdin
 		sshMasterCmd.Stdout = os.Stdout
 		sshMasterCmd.Stderr = os.Stderr
-		stopSSHMaster := func () {
+		stopSSHMaster := func() {
 			if sshMasterCmd.Process != nil {
-				err := sshMasterCmd.Process.Signal(syscall.SIGTERM)
+				err := sshMasterCmd.Process.Signal(syscall.Signal(0))
+				if err != nil {
+					return
+				}
+				err = sshMasterCmd.Process.Signal(syscall.SIGTERM)
 				if err != nil {
 					flog.Error("failed to send SIGTERM to SSH master process: %v", err)
 				}
@@ -78,12 +82,13 @@ func sshCode(host, dir string, o options) error {
 		defer stopSSHMaster()
 
 		err = sshMasterCmd.Start()
+		go sshMasterCmd.Wait()
 		if err != nil {
 			flog.Error("failed to start SSH master connection, disabling connection reuse feature: %v", err)
 			o.noReuseConnection = true
 			stopSSHMaster()
 		} else {
-			err = checkSSHMaster(newSSHFlags, host)
+			err = checkSSHMaster(sshMasterCmd, newSSHFlags, host)
 			if err != nil {
 				flog.Error("SSH master failed to be ready in time, disabling connection reuse feature: %v", err)
 				o.noReuseConnection = true
@@ -307,22 +312,32 @@ func randomPort() (string, error) {
 
 // checkSSHMaster polls every second for 30 seconds to check if the SSH master
 // is ready.
-func checkSSHMaster(sshFlags string, host string) (err error) {
-	maxTries := 30
-	check := func() error {
+func checkSSHMaster(sshMasterCmd *exec.Cmd, sshFlags string, host string) error {
+	var (
+		maxTries = 30
+		sleepDur = time.Second
+		err      error
+	)
+	for i := 0; i < maxTries; i++ {
+		// Check if the master is running
+		if sshMasterCmd.Process == nil {
+			return xerrors.Errorf("SSH master process not running")
+		}
+		err = sshMasterCmd.Process.Signal(syscall.Signal(0))
+		if err != nil {
+			return xerrors.Errorf("failed to check if SSH master process was alive: %v", err)
+		}
+
+		// Check if it's ready
 		sshCmdStr := fmt.Sprintf(`ssh %v -O check %v`, sshFlags, host)
 		sshCmd := exec.Command("sh", "-c", sshCmdStr)
-		return sshCmd.Run()
-	}
-
-	for i := 0; i < maxTries; i++ {
-		err = check()
+		err = sshCmd.Run()
 		if err == nil {
 			return nil
 		}
-		time.Sleep(time.Second)
+		time.Sleep(sleepDur)
 	}
-	return err
+	return xerrors.Errorf("max number of tries exceeded: %d", maxTries)
 }
 
 func syncUserSettings(sshFlags string, host string, back bool) error {
