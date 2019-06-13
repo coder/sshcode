@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
+	"syscall"
 	"strings"
 	"time"
 
@@ -57,32 +58,36 @@ func sshCode(host, dir string, o options) error {
 
 	// Start SSH master connection socket. This prevents multiple password prompts from appearing as authentication
 	// only happens on the initial connection.
-	var sshMasterCmd *exec.Cmd
 	if !o.noReuseConnection {
 		newSSHFlags := fmt.Sprintf(`%v -o "ControlPath=%v"`, o.sshFlags, sshControlPath)
 
 		// -MN means "start a master socket and don't open a session, just connect".
-		sshMasterCmdStr := fmt.Sprintf(`ssh %v -MN %v`, newSSHFlags, host)
-		sshMasterCmd = exec.Command("sh", "-c", sshMasterCmdStr)
+		sshCmdStr := fmt.Sprintf(`exec ssh %v -MN %v`, newSSHFlags, host)
+		sshMasterCmd := exec.Command("sh", "-c", sshCmdStr)
 		sshMasterCmd.Stdin = os.Stdin
 		sshMasterCmd.Stdout = os.Stdout
 		sshMasterCmd.Stderr = os.Stderr
+		stopSSHMaster := func () {
+			if sshMasterCmd.Process != nil {
+				err := sshMasterCmd.Process.Signal(syscall.SIGTERM)
+				if err != nil {
+					flog.Error("failed to send SIGTERM to SSH master process: %v", err)
+				}
+			}
+		}
+		defer stopSSHMaster()
+
 		err = sshMasterCmd.Start()
 		if err != nil {
 			flog.Error("failed to start SSH master connection, disabling connection reuse feature: %v", err)
 			o.noReuseConnection = true
+			stopSSHMaster()
 		} else {
-			// Wait for master to be ready.
 			err = checkSSHMaster(newSSHFlags, host)
 			if err != nil {
-				flog.Error("SSH master failed to start in time, disabling connection reuse feature: %v", err)
+				flog.Error("SSH master failed to be ready in time, disabling connection reuse feature: %v", err)
 				o.noReuseConnection = true
-				if sshMasterCmd.Process != nil {
-					err = sshMasterCmd.Process.Kill()
-					if err != nil {
-						flog.Error("failed to kill SSH master connection, ignoring: %v", err)
-					}
-				}
+				stopSSHMaster()
 			} else {
 				sshMasterCmd.Stdin = nil
 				o.sshFlags = newSSHFlags
@@ -183,39 +188,22 @@ func sshCode(host, dir string, o options) error {
 	case <-ctx.Done():
 	case <-c:
 	}
-	flog.Info("exiting")
 
-	if o.syncBack && !o.skipSync {
-		flog.Info("synchronizing VS Code back to local")
-
-		err = syncExtensions(o.sshFlags, host, true)
-		if err != nil {
-			flog.Error("failed to sync extensions back: %v", err)
-		}
-
-		err = syncUserSettings(o.sshFlags, host, true)
-		if err != nil {
-			flog.Error("failed to sync user settings settings back: %v", err)
-		}
+	flog.Info("shutting down")
+	if !o.syncBack || o.skipSync {
+		return nil
 	}
 
-	// Kill the master connection if we made one.
-	if !o.noReuseConnection {
-		// Try using the -O exit syntax first before killing the master.
-		sshCmdStr = fmt.Sprintf(`ssh %v -O exit %v`, o.sshFlags, host)
-		sshCmd = exec.Command("sh", "-c", sshCmdStr)
-		sshCmd.Stdout = os.Stdout
-		sshCmd.Stderr = os.Stderr
-		err = sshCmd.Run()
-		if err != nil {
-			flog.Error("failed to gracefully stop SSH master connection, killing: %v", err)
-			if sshMasterCmd.Process != nil {
-				err = sshMasterCmd.Process.Kill()
-				if err != nil {
-					flog.Error("failed to kill SSH master connection, ignoring: %v", err)
-				}
-			}
-		}
+	flog.Info("synchronizing VS Code back to local")
+
+	err = syncExtensions(o.sshFlags, host, true)
+	if err != nil {
+		return xerrors.Errorf("failed to sync extensions back: %v", err)
+	}
+
+	err = syncUserSettings(o.sshFlags, host, true)
+	if err != nil {
+		return xerrors.Errorf("failed to sync user settings settings back: %v", err)
 	}
 
 	return nil
