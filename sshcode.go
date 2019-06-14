@@ -56,7 +56,8 @@ func sshCode(host, dir string, o options) error {
 	dlScript := downloadScript(codeServerPath)
 
 	// Downloads the latest code-server and allows it to be executed.
-	sshCmdStr := fmt.Sprintf("ssh %v %v /bin/bash -l", o.sshFlags, host)
+	// sshCmdStr := fmt.Sprintf("ssh %v %v /bin/bash -l", o.sshFlags, host)
+	sshCmdStr := fmt.Sprintf("ssh %v %v '/usr/bin/env bash -l'", o.sshFlags, host)
 
 	sshCmd := exec.Command("sh", "-l", "-c", sshCmdStr)
 	sshCmd.Stdout = os.Stdout
