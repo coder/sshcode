@@ -35,6 +35,7 @@ We currently support:
 - Linux
 - MacOS
 - WSL
+- Windows Git Bash (MINGW64) - Requires [rsynch for Windows](http://repo.msys2.org/msys/x86_64/rsync-3.1.3-1-x86_64.pkg.tar.xz)
 
 ## Usage
 
