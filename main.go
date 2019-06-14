@@ -133,3 +133,9 @@ func relativeWindowsPath(dir string) string {
 	rel = "~/" + filepath.ToSlash(rel)
 	return rel
 }
+
+func gitbashWindowsDir(dir string) (res string) {
+	res = filepath.ToSlash(dir)
+	res = "/" + strings.Replace(res, ":", "", -1)
+	return res
+}
