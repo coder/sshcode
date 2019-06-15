@@ -21,7 +21,9 @@ import (
 )
 
 const codeServerPath = "~/.cache/sshcode/sshcode-server"
-const sshControlPath = "~/.ssh/control-%h-%p-%r"
+const sshDirectory = "~/.ssh"
+const sshDirectoryUnsafeModeMask = 0022
+const sshControlPath = sshDirectory + "/control-%h-%p-%r"
 
 type options struct {
 	skipSync          bool
@@ -34,8 +36,6 @@ type options struct {
 }
 
 func sshCode(host, dir string, o options) error {
-	flog.Info("ensuring code-server is updated...")
-
 	host, extraSSHFlags, err := parseHost(host)
 	if err != nil {
 		return xerrors.Errorf("failed to parse host IP: %w", err)
@@ -54,6 +54,28 @@ func sshCode(host, dir string, o options) error {
 	}
 	if err != nil {
 		return xerrors.Errorf("failed to find available remote port: %w", err)
+	}
+
+	// Check the SSH directory's permissions and warn the user if it is not safe.
+	sshDirectoryMode, err := os.Lstat(expandPath(sshDirectory))
+	if err != nil {
+		if !o.noReuseConnection {
+			flog.Info("failed to stat %v directory, disabling connection reuse feature: %v", sshDirectory, err)
+			o.noReuseConnection = true
+		}
+	} else {
+		if !sshDirectoryMode.IsDir() {
+			if !o.noReuseConnection {
+				flog.Info("%v is not a directory, disabling connection reuse feature", sshDirectory)
+				o.noReuseConnection = true
+			} else {
+				flog.Info("warning: %v is not a directory", sshDirectory)
+			}
+		}
+		if sshDirectoryMode.Mode().Perm()&sshDirectoryUnsafeModeMask != 0 {
+			flog.Info("warning: the %v directory has unsafe permissions, they should only be writable by "+
+				"the owner (and files inside should be set to 0600)", sshDirectory)
+		}
 	}
 
 	// Start SSH master connection socket. This prevents multiple password prompts from appearing as authentication
@@ -100,6 +122,7 @@ func sshCode(host, dir string, o options) error {
 		}
 	}
 
+	flog.Info("ensuring code-server is updated...")
 	dlScript := downloadScript(codeServerPath)
 
 	// Downloads the latest code-server and allows it to be executed.
@@ -212,6 +235,23 @@ func sshCode(host, dir string, o options) error {
 	}
 
 	return nil
+}
+
+// expandPath returns an expanded version of path.
+func expandPath(path string) string {
+	path = filepath.Clean(os.ExpandEnv(path))
+
+	// Replace tilde notation in path with the home directory.
+	homedir := os.Getenv("HOME")
+	if homedir != "" {
+		if path == "~" {
+			path = homedir
+		} else if strings.HasPrefix(path, "~/") {
+			path = filepath.Join(homedir, path[2:])
+		}
+	}
+
+	return filepath.Clean(path)
 }
 
 func parseBindAddr(bindAddr string) (string, error) {
