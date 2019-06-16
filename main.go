@@ -53,7 +53,7 @@ func (c *rootCmd) RegisterFlags(fl *flag.FlagSet) {
 	fl.BoolVar(&c.skipSync, "skipsync", false, "skip syncing local settings and extensions to remote host")
 	fl.BoolVar(&c.syncBack, "b", false, "sync extensions back on termination")
 	fl.BoolVar(&c.printVersion, "version", false, "print version information and exit")
-	fl.StringVar(&c.bindAddr, "bind", "", "local bind address for ssh tunnel")
+	fl.StringVar(&c.bindAddr, "bind", "", `local bind address for ssh tunnel, in [HOST]:PORT syntax (default: 127.0.0.1)`)
 	fl.StringVar(&c.sshFlags, "ssh-flags", "", "custom SSH flags")
 }
 
