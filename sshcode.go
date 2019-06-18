@@ -56,9 +56,9 @@ func sshCode(host, dir string, o options) error {
 	dlScript := downloadScript(codeServerPath)
 
 	// Downloads the latest code-server and allows it to be executed.
-	sshCmdStr := fmt.Sprintf("ssh %v %v '/usr/bin/env bash'", o.sshFlags, host)
+	sshCmdStr := fmt.Sprintf("ssh %v %v '/usr/bin/env bash -l'", o.sshFlags, host)
 
-	sshCmd := exec.Command("sh", "-c", sshCmdStr)
+	sshCmd := exec.Command("sh", "-l", "-c", sshCmdStr)
 	sshCmd.Stdout = os.Stdout
 	sshCmd.Stderr = os.Stderr
 	sshCmd.Stdin = strings.NewReader(dlScript)
@@ -99,7 +99,7 @@ func sshCode(host, dir string, o options) error {
 		)
 
 	// Starts code-server and forwards the remote port.
-	sshCmd = exec.Command("sh", "-c", sshCmdStr)
+	sshCmd = exec.Command("sh", "-l", "-c", sshCmdStr)
 	sshCmd.Stdin = os.Stdin
 	sshCmd.Stdout = os.Stdout
 	sshCmd.Stderr = os.Stderr
@@ -396,7 +396,7 @@ func parseHost(host string) (parsedHost string, additionalFlags string, err erro
 func parseGCPSSHCmd(instance string) (ip, sshFlags string, err error) {
 	dryRunCmd := fmt.Sprintf("gcloud compute ssh --dry-run %v", instance)
 
-	out, err := exec.Command("sh", "-c", dryRunCmd).CombinedOutput()
+	out, err := exec.Command("sh", "-l", "-c", dryRunCmd).CombinedOutput()
 	if err != nil {
 		return "", "", xerrors.Errorf("%s: %w", out, err)
 	}
