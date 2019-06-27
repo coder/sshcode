@@ -168,8 +168,8 @@ func sshCode(host, dir string, o options) error {
 }
 
 func parseBindAddr(bindAddr string) (string, error) {
-	if bindAddr == "" {
-		bindAddr = ":"
+	if !strings.Contains(bindAddr, ":") {
+		bindAddr += ":"
 	}
 
 	host, port, err := net.SplitHostPort(bindAddr)
