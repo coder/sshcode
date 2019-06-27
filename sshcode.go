@@ -195,7 +195,8 @@ func sshCode(host, dir string, o options) error {
 func expandPath(path string) string {
 	path = filepath.Clean(os.ExpandEnv(path))
 
-	// Replace tilde notation in path with the home directory.
+	// Replace tilde notation in path with the home directory. You can't replace the first instance of `~` in the
+	// string with the homedir as having a tilde in the middle of a filename is valid.
 	homedir := os.Getenv("HOME")
 	if homedir != "" {
 		if path == "~" {
