@@ -78,11 +78,11 @@ func (c *rootCmd) Run(fl *flag.FlagSet) {
 	}
 
 	err := sshCode(host, dir, options{
-		skipSync:          c.skipSync,
-		sshFlags:          c.sshFlags,
-		bindAddr:          c.bindAddr,
-		syncBack:          c.syncBack,
-		noReuseConnection: c.noReuseConnection,
+		skipSync:        c.skipSync,
+		sshFlags:        c.sshFlags,
+		bindAddr:        c.bindAddr,
+		syncBack:        c.syncBack,
+		reuseConnection: !c.noReuseConnection,
 	})
 
 	if err != nil {
