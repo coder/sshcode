@@ -36,6 +36,11 @@ We currently support:
 - MacOS
 - WSL
 
+For the remote server, we currently only support Linux `x86_64` (64-bit)
+servers with `glibc`. `musl` libc (which is most notably used by Alpine Linux)
+is currently not supported on the remote server:
+[#122](https://github.com/cdr/sshcode/issues/122).
+
 ## Usage
 
 ```bash
