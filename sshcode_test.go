@@ -48,7 +48,7 @@ func TestSSHCode(t *testing.T) {
 	waitForSSHCode(t, remotePort, time.Second*30)
 
 	// Typically we'd do an os.Stat call here but the os package doesn't expand '~'
-	out, err := exec.Command("sh", "-c", "stat "+codeServerPath).CombinedOutput()
+	out, err := exec.Command("sh", "-l", "-c", "stat "+codeServerPath).CombinedOutput()
 	require.NoError(t, err, "%s", out)
 
 	out, err = exec.Command("pkill", filepath.Base(codeServerPath)).CombinedOutput()
@@ -200,7 +200,7 @@ func handleSession(ch ssh.Channel, in <-chan *ssh.Request, t *testing.T) {
 			return
 		}
 
-		cmd := exec.Command("sh", "-c", exReq.Command)
+		cmd := exec.Command("sh", "-l", "-c", exReq.Command)
 
 		stdin, err := cmd.StdinPipe()
 		require.NoError(t, err)
