@@ -210,8 +210,8 @@ func expandPath(path string) string {
 }
 
 func parseBindAddr(bindAddr string) (string, error) {
-	if bindAddr == "" {
-		bindAddr = ":"
+	if !strings.Contains(bindAddr, ":") {
+		bindAddr += ":"
 	}
 
 	host, port, err := net.SplitHostPort(bindAddr)
@@ -481,6 +481,7 @@ func downloadScript(codeServerPath string) string {
 	return fmt.Sprintf(
 		`set -euxo pipefail || exit 1
 
+[ "$(uname -m)" != "x86_64" ] && echo "Unsupported server architecture $(uname -m). code-server only has releases for x86_64 systems." && exit 1
 pkill -f %v || true
 mkdir -p ~/.local/share/code-server %v
 cd %v
