@@ -24,6 +24,9 @@ func configDir() (string, error) {
 		path = os.ExpandEnv("$HOME/.config/Code/User/")
 	case "darwin":
 		path = os.ExpandEnv("$HOME/Library/Application Support/Code/User/")
+	case "windows":
+		// Can't use the filepath.Clean function to keep Linux format path that works well with gitbash
+		return gitbashWindowsDir(os.ExpandEnv("$HOME/.config/Code/User")), nil
 	default:
 		return "", xerrors.Errorf("unsupported platform: %s", runtime.GOOS)
 	}
@@ -39,6 +42,9 @@ func extensionsDir() (string, error) {
 	switch runtime.GOOS {
 	case "linux", "darwin":
 		path = os.ExpandEnv("$HOME/.vscode/extensions/")
+	case "windows":
+		// Can't use the filepath.Clean function to keep Linux format path that works well with gitbash
+		return gitbashWindowsDir(os.ExpandEnv("$HOME/.vscode/extensions")), nil
 	default:
 		return "", xerrors.Errorf("unsupported platform: %s", runtime.GOOS)
 	}

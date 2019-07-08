@@ -490,8 +490,10 @@ wget -N https://codesrv-ci.cdr.sh/latest-linux
 ln latest-linux %v
 chmod +x %v`,
 		codeServerPath,
-		filepath.Dir(codeServerPath),
-		filepath.Dir(codeServerPath),
+		filepath.ToSlash(filepath.Dir(codeServerPath)),
+		filepath.ToSlash(filepath.Dir(codeServerPath)),
+		// filepath.Dir(codeServerPath),
+		// filepath.Dir(codeServerPath),
 		codeServerPath,
 		codeServerPath,
 		codeServerPath,
