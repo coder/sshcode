@@ -485,7 +485,11 @@ func downloadScript(codeServerPath string) string {
 pkill -f %v || true
 mkdir -p ~/.local/share/code-server %v
 cd %v
-wget -N https://codesrv-ci.cdr.sh/latest-linux
+curlflags="-o latest-linux"
+if [ -f latest-linux ]; then
+	curlflags="$curlflags -z latest-linux"
+fi
+curl $curlflags https://codesrv-ci.cdr.sh/latest-linux
 [ -f %v ] && rm %v
 ln latest-linux %v
 chmod +x %v`,
