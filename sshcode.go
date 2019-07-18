@@ -564,5 +564,5 @@ func parseGCPSSHCmd(instance string) (ip, sshFlags string, err error) {
 		return "", "", xerrors.Errorf("parsed invalid ip address %v", ip)
 	}
 
-	return ip, sshFlags, nil
+	return strings.TrimSpace(userIP), sshFlags, nil
 }
