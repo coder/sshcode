@@ -1,3 +1,22 @@
+## Merith-TK `sshcode` Fork
+___
+This fork is specifically for getting `sshcode` to work within the `msys`/`MinGW` enviroment
+
+What currently works, 
+* pretty much everything you would expect if you dont have chrome installed, starts the reverse proxy server, opens default browser.
+
+What doesnt work
+* Chrome support, cannot test as i dont use chrome.
+
+What KINDA works (Requires user to do some stuff)
+* SyncBack??? <> Basically, you need rsync installed, just like on linux
+* VSCode SyncBack <> It will use the DEFAULT paths to store VS code information on windows
+### TODO
+[ ] Detect Windows seperate from `msys`/`mingw` (Probably going to check for unix variables.)
+[] Add windows support (IE: `C:\` file paths )
+
+
+___
 # sshcode
 
 [!["Open Issues"](https://img.shields.io/github/issues-raw/cdr/sshcode.svg)](https://github.com/cdr/sshcode/issues)
