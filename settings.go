@@ -25,7 +25,7 @@ func configDir() (string, error) {
 	case "darwin":
 		path = os.ExpandEnv("$HOME/Library/Application Support/Code/User/")
 	case "windows":
-		path = os.ExpandEnv("/c/Users/$USERNAME/AppData/Roaming/Code/User")
+		path = os.ExpandEnv("/Users/$USERNAME/AppData/Roaming/Code/User")
 	default:
 		return "", xerrors.Errorf("unsupported platform: %s", runtime.GOOS)
 	}
@@ -42,7 +42,7 @@ func extensionsDir() (string, error) {
 	case "linux", "darwin":
 		path = os.ExpandEnv("$HOME/.vscode/extensions/")
 	case "windows":
-		path = os.ExpandEnv("/c/Users/$USERNAME/.vscode/extensions/")
+		path = os.ExpandEnv("/Users/$USERNAME/.vscode/extensions/")
 	default:
 		return "", xerrors.Errorf("unsupported platform: %s", runtime.GOOS)
 	}
