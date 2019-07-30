@@ -35,7 +35,7 @@ We currently support:
 - Linux
 - MacOS
 - WSL
-- Windows Git Bash (MINGW64) - Requires [rsynch for Windows](http://repo.msys2.org/msys/x86_64/rsync-3.1.3-1-x86_64.pkg.tar.xz)
+- Windows Git Bash (MINGW64) - Requires rsync for Windows. To install rsync download it [here](http://repo.msys2.org/msys/x86_64/rsync-3.1.3-1-x86_64.pkg.tar.xz) and run `tar xvf rsync-3.1.3-1-x86_64.pkg.tar.xz` on Git bash. Don't forget to copy the executable to a folder in the PATH ` cp usr/bin/rsync.exe /mingw64/bin`.
 
 For the remote server, we currently only support Linux `x86_64` (64-bit)
 servers with `glibc`. `musl` libc (which is most notably used by Alpine Linux)

@@ -83,7 +83,6 @@ func (c *rootCmd) Run(fl *flag.FlagSet) {
 	// Get linux relative path if on windows
 	if runtime.GOOS == "windows" {
 		dir = relativeWindowsPath(dir)
-		fmt.Printf("relative path is %s\n", dir)
 	}
 
 	err := sshCode(host, dir, options{
@@ -123,10 +122,9 @@ Arguments:
 }
 
 func relativeWindowsPath(dir string) string {
-	fmt.Printf("Received '%s'\n", dir)
 	usr, err := user.Current()
 	if err != nil {
-		fmt.Printf("Could not get user: %v", err)
+		flog.Error("Could not get user: %v", err)
 		return dir
 	}
 	rel, err := filepath.Rel(usr.HomeDir, dir)
@@ -137,6 +135,7 @@ func relativeWindowsPath(dir string) string {
 	return rel
 }
 
+// gitbashWindowsDir translates a directory similar to `C:\Users\username\path` to `~/path` for compatibility with Git bash.
 func gitbashWindowsDir(dir string) (res string) {
 	res = filepath.ToSlash(dir)
 	res = "/" + strings.Replace(res, ":", "", -1)
