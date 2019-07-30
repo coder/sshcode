@@ -13,10 +13,7 @@ What KINDA works (Requires user to do some stuff)
 * VSCode SyncBack <> It will use the DEFAULT paths to store VS code information on windows
 ### TODO
 [ ] Detect Windows seperate from `msys`/`mingw` (Probably going to check for unix variables.)
-[] Add windows support (IE: `C:\` file paths )
 
-
-___
 # sshcode
 
 [!["Open Issues"](https://img.shields.io/github/issues-raw/cdr/sshcode.svg)](https://github.com/cdr/sshcode/issues)
