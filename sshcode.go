@@ -245,8 +245,6 @@ func openBrowser(url string) {
 	switch {
 	case commandExists("chrome"):
 		openCmd = exec.Command("chrome", chromeOptions(url)...)
-	case commandExists("chrome.exe"):
-		openCmd = exec.Command("chrome.exe", chromeOptions(url)...)
 	case commandExists("google-chrome"):
 		openCmd = exec.Command("google-chrome", chromeOptions(url)...)
 	case commandExists("google-chrome-stable"):
