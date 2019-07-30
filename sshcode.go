@@ -239,7 +239,7 @@ func openBrowser(url string) {
 	const (
 		macPath  = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 		wslPath  = "/mnt/c/Program Files (x86)/Google/Chrome/Application/chrome.exe"
-		msysPath = "/c/Program Files (x86)/Google/Chrome/Application/chrome.exe"
+		msysPath = "/Program Files (x86)/Google/Chrome/Application/chrome.exe"
 	)
 
 	switch {
