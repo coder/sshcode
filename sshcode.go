@@ -28,7 +28,7 @@ const (
 	sshControlPath             = sshDirectory + "/control-%h-%p-%r"
 )
 
-type options struct { 
+type options struct {
 	skipSync        bool
 	syncBack        bool
 	noOpen          bool
@@ -237,12 +237,14 @@ func openBrowser(url string) {
 	var openCmd *exec.Cmd
 
 	const (
-		macPath = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-		wslPath = "/mnt/c/Program Files (x86)/Google/Chrome/Application/chrome.exe"
+		macPath  = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+		wslPath  = "/mnt/c/Program Files (x86)/Google/Chrome/Application/chrome.exe"
 		msysPath = "/c/Program Files (x86)/Google/Chrome/Application/chrome.exe"
 	)
 
 	switch {
+	case commandExists("chrome"):
+		openCmd = exec.Command("chrome", chromeOptions(url)...)
 	case commandExists("google-chrome"):
 		openCmd = exec.Command("google-chrome", chromeOptions(url)...)
 	case commandExists("google-chrome-stable"):
