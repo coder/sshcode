@@ -423,7 +423,7 @@ func syncUserSettings(sshFlags string, host string, back bool) error {
 		return err
 	}
 
-	const remoteSettingsDir = "~/.local/share/code-server/User/"
+	const remoteSettingsDir = ".local/share/code-server/User/"
 
 	var (
 		src  = localConfDir + "/"
@@ -449,7 +449,7 @@ func syncExtensions(sshFlags string, host string, back bool) error {
 		return err
 	}
 
-	const remoteExtensionsDir = "~/.local/share/code-server/extensions/"
+	const remoteExtensionsDir = ".local/share/code-server/extensions/"
 
 	var (
 		src  = localExtensionsDir + "/"
@@ -496,7 +496,7 @@ func downloadScript(codeServerPath string) string {
 
 [ "$(uname -m)" != "x86_64" ] && echo "Unsupported server architecture $(uname -m). code-server only has releases for x86_64 systems." && exit 1
 pkill -f %v || true
-mkdir -p ~/.local/share/code-server %v
+mkdir -p $HOME/.local/share/code-server %v
 cd %v
 curlflags="-o latest-linux"
 if [ -f latest-linux ]; then

@@ -120,28 +120,13 @@ Arguments:
 	)
 }
 
-//func relativeWindowsPath(dir string) string {
-//	usr, err := user.Current()
-//	if err != nil {
-//		flog.Error("Could not get user: %v", err)
-//		return dir
-//	}
-//	rel, err := filepath.Rel(usr.HomeDir, dir)
-//	if err != nil {
-//		return dir
-//	}
-//	rel = "~/" + filepath.ToSlash(rel)
-//	return rel
-//}
-
 //This section translates a windows path such as "C:\Users\user" to "\Users\user"
 //AND removes the default paths for mingw and git4windows to fix specifying a file path breaking
 func gitbashWindowsDir(dir string) (res string) {
 	res = filepath.ToSlash(dir)
 	res = strings.Replace(res, "C:", "", -1)
 
-	// "/msys" is the default path for my setup, REMOVE BEFORE PUSH
-	res = strings.Replace(res, "/msys", "", -1)
-	res = strings.Replace(res, "/ming64", "", -1)
+	// If you dont use "C:\mingw64" as the location where you installed mingw, cop this and replace /mingw64 with your install path
+	res = strings.Replace(res, "/mingw64", "", -1)
 	return res
 }
