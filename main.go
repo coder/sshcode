@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
-	"os/user"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -82,7 +81,7 @@ func (c *rootCmd) Run(fl *flag.FlagSet) {
 
 	// Get linux relative path if on windows
 	if runtime.GOOS == "windows" {
-		dir = relativeWindowsPath(dir)
+		dir = gitbashWindowsDir(dir)
 	}
 
 	err := sshCode(host, dir, options{
@@ -121,24 +120,28 @@ Arguments:
 	)
 }
 
-func relativeWindowsPath(dir string) string {
-	usr, err := user.Current()
-	if err != nil {
-		flog.Error("Could not get user: %v", err)
-		return dir
-	}
-	rel, err := filepath.Rel(usr.HomeDir, dir)
-	if err != nil {
-		return dir
-	}
-	rel = "~/" + filepath.ToSlash(rel)
-	return rel
-}
+//func relativeWindowsPath(dir string) string {
+//	usr, err := user.Current()
+//	if err != nil {
+//		flog.Error("Could not get user: %v", err)
+//		return dir
+//	}
+//	rel, err := filepath.Rel(usr.HomeDir, dir)
+//	if err != nil {
+//		return dir
+//	}
+//	rel = "~/" + filepath.ToSlash(rel)
+//	return rel
+//}
 
-// gitbashWindowsDir translates a directory similar to `C:\Users\username\path` to `~/path` for compatibility with Git bash.
+//This section translates a windows path such as "C:\Users\user" to "\Users\user"
+//AND removes the default paths for mingw and git4windows to fix specifying a file path breaking
 func gitbashWindowsDir(dir string) (res string) {
 	res = filepath.ToSlash(dir)
 	res = strings.Replace(res, "C:", "", -1)
-	//res2 =
+
+	// "/msys" is the default path for my setup, REMOVE BEFORE PUSH
+	res = strings.Replace(res, "/msys", "", -1)
+	res = strings.Replace(res, "/ming64", "", -1)
 	return res
 }

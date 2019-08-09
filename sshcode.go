@@ -200,9 +200,9 @@ func expandPath(path string) string {
 	// string with the homedir as having a tilde in the middle of a filename is valid.
 	homedir := os.Getenv("HOME")
 	if homedir != "" {
-		if path == "$HOME" {
+		if path == "~" {
 			path = homedir
-		} else if strings.HasPrefix(path, "$HOME/") {
+		} else if strings.HasPrefix(path, "~/") {
 			path = filepath.Join(homedir, path[2:])
 		}
 	}
@@ -423,7 +423,7 @@ func syncUserSettings(sshFlags string, host string, back bool) error {
 		return err
 	}
 
-	const remoteSettingsDir = "$HOME/.local/share/code-server/User/"
+	const remoteSettingsDir = "~/.local/share/code-server/User/"
 
 	var (
 		src  = localConfDir + "/"
@@ -449,7 +449,7 @@ func syncExtensions(sshFlags string, host string, back bool) error {
 		return err
 	}
 
-	const remoteExtensionsDir = "$HOME/.local/share/code-server/extensions/"
+	const remoteExtensionsDir = "~/.local/share/code-server/extensions/"
 
 	var (
 		src  = localExtensionsDir + "/"
