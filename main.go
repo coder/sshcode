@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"os/user"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -77,6 +80,11 @@ func (c *rootCmd) Run(fl *flag.FlagSet) {
 		dir = "~"
 	}
 
+	// Get linux relative path if on windows
+	if runtime.GOOS == "windows" {
+		dir = relativeWindowsPath(dir)
+	}
+
 	err := sshCode(host, dir, options{
 		skipSync:        c.skipSync,
 		sshFlags:        c.sshFlags,
@@ -111,4 +119,26 @@ Arguments:
 		helpTab,
 		helpTab,
 	)
+}
+
+func relativeWindowsPath(dir string) string {
+	usr, err := user.Current()
+	if err != nil {
+		flog.Error("Could not get user: %v", err)
+		return dir
+	}
+	rel, err := filepath.Rel(usr.HomeDir, dir)
+	if err != nil {
+		return dir
+	}
+	rel = "~/" + filepath.ToSlash(rel)
+	return rel
+}
+
+// gitbashWindowsDir translates a directory similar to `C:\Users\username\path` to `~/path` for compatibility with Git bash.
+func gitbashWindowsDir(dir string) (res string) {
+	res = filepath.ToSlash(dir)
+	res = strings.Replace(res, "C:", "", -1)
+	//res2 =
+	return res
 }

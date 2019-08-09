@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -199,9 +200,9 @@ func expandPath(path string) string {
 	// string with the homedir as having a tilde in the middle of a filename is valid.
 	homedir := os.Getenv("HOME")
 	if homedir != "" {
-		if path == "~" {
+		if path == "$HOME" {
 			path = homedir
-		} else if strings.HasPrefix(path, "~/") {
+		} else if strings.HasPrefix(path, "$HOME/") {
 			path = filepath.Join(homedir, path[2:])
 		}
 	}
@@ -313,6 +314,13 @@ func randomPort() (string, error) {
 // checkSSHDirectory performs sanity and safety checks on sshDirectory, and
 // returns a new value for o.reuseConnection depending on the checks.
 func checkSSHDirectory(sshDirectory string, reuseConnection bool) bool {
+
+	if runtime.GOOS == "windows" {
+		flog.Info("OS is windows, disabling connection reuse feature")
+		//reuseConnection = false
+		return false
+	}
+
 	sshDirectoryMode, err := os.Lstat(expandPath(sshDirectory))
 	if err != nil {
 		if reuseConnection {
@@ -415,7 +423,7 @@ func syncUserSettings(sshFlags string, host string, back bool) error {
 		return err
 	}
 
-	const remoteSettingsDir = "~/.local/share/code-server/User/"
+	const remoteSettingsDir = "$HOME/.local/share/code-server/User/"
 
 	var (
 		src  = localConfDir + "/"
@@ -441,7 +449,7 @@ func syncExtensions(sshFlags string, host string, back bool) error {
 		return err
 	}
 
-	const remoteExtensionsDir = "~/.local/share/code-server/extensions/"
+	const remoteExtensionsDir = "$HOME/.local/share/code-server/extensions/"
 
 	var (
 		src  = localExtensionsDir + "/"
@@ -499,8 +507,8 @@ curl $curlflags https://codesrv-ci.cdr.sh/latest-linux
 ln latest-linux %v
 chmod +x %v`,
 		codeServerPath,
-		filepath.Dir(codeServerPath),
-		filepath.Dir(codeServerPath),
+		filepath.ToSlash(filepath.Dir(codeServerPath)),
+		filepath.ToSlash(filepath.Dir(codeServerPath)),
 		codeServerPath,
 		codeServerPath,
 		codeServerPath,
