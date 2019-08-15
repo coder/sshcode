@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -78,6 +79,11 @@ func (c *rootCmd) Run(fl *pflag.FlagSet) {
 	dir := fl.Arg(1)
 	if dir == "" {
 		dir = "~"
+	}
+
+	// Get linux relative path if on windows.
+	if runtime.GOOS == "windows" {
+		dir = gitbashWindowsDir(dir)
 	}
 
 	err := sshCode(host, dir, options{

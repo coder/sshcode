@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -106,7 +107,6 @@ func sshCode(host, dir string, o options) error {
 
 		// Downloads the latest code-server and allows it to be executed.
 		sshCmdStr := fmt.Sprintf("ssh %v %v '/usr/bin/env bash -l'", o.sshFlags, host)
-
 		sshCmd := exec.Command("sh", "-l", "-c", sshCmdStr)
 		sshCmd.Stdout = os.Stdout
 		sshCmd.Stderr = os.Stderr
@@ -145,10 +145,9 @@ func sshCode(host, dir string, o options) error {
 	flog.Info("Tunneling remote port %v to %v", o.remotePort, o.bindAddr)
 
 	sshCmdStr :=
-		fmt.Sprintf("ssh -tt -q -L %v:localhost:%v %v %v 'cd %v; %v --host 127.0.0.1 --auth none --port=%v'",
-			o.bindAddr, o.remotePort, o.sshFlags, host, dir, codeServerPath, o.remotePort,
+		fmt.Sprintf("ssh -tt -q -L %v:localhost:%v %v %v '%v  %v --host 127.0.0.1 --auth none --port=%v'",
+			o.bindAddr, o.remotePort, o.sshFlags, host, codeServerPath, dir, o.remotePort,
 		)
-
 	// Starts code-server and forwards the remote port.
 	sshCmd := exec.Command("sh", "-l", "-c", sshCmdStr)
 	sshCmd.Stdin = os.Stdin
@@ -266,9 +265,12 @@ func openBrowser(url string) {
 	const (
 		macPath = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 		wslPath = "/mnt/c/Program Files (x86)/Google/Chrome/Application/chrome.exe"
+		winPath = "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe"
 	)
 
 	switch {
+	case commandExists("chrome"):
+		openCmd = exec.Command("chrome", chromeOptions(url)...)
 	case commandExists("google-chrome"):
 		openCmd = exec.Command("google-chrome", chromeOptions(url)...)
 	case commandExists("google-chrome-stable"):
@@ -281,6 +283,8 @@ func openBrowser(url string) {
 		openCmd = exec.Command(macPath, chromeOptions(url)...)
 	case pathExists(wslPath):
 		openCmd = exec.Command(wslPath, chromeOptions(url)...)
+	case pathExists(winPath):
+		openCmd = exec.Command(winPath, chromeOptions(url)...)
 	default:
 		err := browser.OpenURL(url)
 		if err != nil {
@@ -335,6 +339,11 @@ func randomPort() (string, error) {
 // checkSSHDirectory performs sanity and safety checks on sshDirectory, and
 // returns a new value for o.reuseConnection depending on the checks.
 func checkSSHDirectory(sshDirectory string, reuseConnection bool) bool {
+	if runtime.GOOS == "windows" {
+		flog.Info("OS is windows, disabling connection reuse feature")
+		return false
+	}
+
 	sshDirectoryMode, err := os.Lstat(expandPath(sshDirectory))
 	if err != nil {
 		if reuseConnection {
@@ -451,8 +460,10 @@ func syncUserSettings(sshFlags string, host string, back bool) error {
 		return err
 	}
 
-	const remoteSettingsDir = "~/.local/share/code-server/User/"
-
+	var remoteSettingsDir = "~/.local/share/code-server/User/"
+	if runtime.GOOS == "windows" {
+		remoteSettingsDir = ".local/share/code-server/User/"
+	}
 	var (
 		src  = localConfDir + "/"
 		dest = host + ":" + remoteSettingsDir
@@ -477,7 +488,10 @@ func syncExtensions(sshFlags string, host string, back bool) error {
 		return err
 	}
 
-	const remoteExtensionsDir = "~/.local/share/code-server/extensions/"
+	var remoteExtensionsDir = "~/.local/share/code-server/extensions/"
+	if runtime.GOOS == "windows" {
+		remoteExtensionsDir = ".local/share/code-server/extensions/"
+	}
 
 	var (
 		src  = localExtensionsDir + "/"
@@ -505,6 +519,7 @@ func rsync(src string, dest string, sshFlags string, excludePaths ...string) err
 		// locally in order to properly delete an extension.
 		"--delete",
 		"--copy-unsafe-links",
+		"-zz",
 		src, dest,
 	)...,
 	)
@@ -524,7 +539,7 @@ func downloadScript(codeServerPath string) string {
 
 [ "$(uname -m)" != "x86_64" ] && echo "Unsupported server architecture $(uname -m). code-server only has releases for x86_64 systems." && exit 1
 pkill -f %v || true
-mkdir -p ~/.local/share/code-server %v
+mkdir -p $HOME/.local/share/code-server %v
 cd %v
 curlflags="-o latest-linux"
 if [ -f latest-linux ]; then
@@ -535,8 +550,8 @@ curl $curlflags https://codesrv-ci.cdr.sh/latest-linux
 ln latest-linux %v
 chmod +x %v`,
 		codeServerPath,
-		filepath.Dir(codeServerPath),
-		filepath.Dir(codeServerPath),
+		filepath.ToSlash(filepath.Dir(codeServerPath)),
+		filepath.ToSlash(filepath.Dir(codeServerPath)),
 		codeServerPath,
 		codeServerPath,
 		codeServerPath,
@@ -548,6 +563,11 @@ chmod +x %v`,
 func ensureDir(path string) error {
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {
+		// This fixes a issue where Go reads `/c/` as `C:\c\` and creates
+		// empty directories on the client that don't need to exist.
+		if runtime.GOOS == "windows" && strings.HasPrefix(path, "/c/") {
+			path = "C:" + path[2:]
+		}
 		err = os.MkdirAll(path, 0750)
 	}
 
@@ -607,4 +627,27 @@ func parseGCPSSHCmd(instance string) (ip, sshFlags string, err error) {
 	userIP := toks[len(toks)-1]
 
 	return strings.TrimSpace(userIP), sshFlags, nil
+}
+
+// gitbashWindowsDir strips a the msys2 install directory from the beginning of
+// the path. On msys2, if a user provides `/workspace` sshcode will receive
+// `C:/msys64/workspace` which won't work on the remote host.
+func gitbashWindowsDir(dir string) string {
+
+	// Don't bother figuring out path if it's relative to home dir.
+	if strings.HasPrefix(dir, "~/") {
+		if dir == "~" {
+			return "~/"
+		}
+		return dir
+	}
+
+	mingwPrefix, err := exec.Command("sh", "-c", "{ cd / && pwd -W; }").Output()
+	if err != nil {
+		// Default to a sane location.
+		mingwPrefix = []byte("C:/mingw64")
+	}
+
+	prefix := strings.TrimSuffix(string(mingwPrefix), "/\n")
+	return strings.TrimPrefix(dir, prefix)
 }
