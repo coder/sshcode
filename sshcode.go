@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -237,11 +238,14 @@ func openBrowser(url string) {
 	var openCmd *exec.Cmd
 
 	const (
-		macPath = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-		wslPath = "/mnt/c/Program Files (x86)/Google/Chrome/Application/chrome.exe"
+		macPath  = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+		wslPath  = "/mnt/c/Program Files (x86)/Google/Chrome/Application/chrome.exe"
+		msysPath = "/Program Files (x86)/Google/Chrome/Application/chrome.exe"
 	)
 
 	switch {
+	case commandExists("chrome"):
+		openCmd = exec.Command("chrome", chromeOptions(url)...)
 	case commandExists("google-chrome"):
 		openCmd = exec.Command("google-chrome", chromeOptions(url)...)
 	case commandExists("google-chrome-stable"):
@@ -254,6 +258,8 @@ func openBrowser(url string) {
 		openCmd = exec.Command(macPath, chromeOptions(url)...)
 	case pathExists(wslPath):
 		openCmd = exec.Command(wslPath, chromeOptions(url)...)
+	case pathExists(msysPath):
+		openCmd = exec.Command(msysPath, chromeOptions(url)...)
 	default:
 		err := browser.OpenURL(url)
 		if err != nil {
@@ -308,6 +314,13 @@ func randomPort() (string, error) {
 // checkSSHDirectory performs sanity and safety checks on sshDirectory, and
 // returns a new value for o.reuseConnection depending on the checks.
 func checkSSHDirectory(sshDirectory string, reuseConnection bool) bool {
+
+	if runtime.GOOS == "windows" {
+		flog.Info("OS is windows, disabling connection reuse feature")
+		//reuseConnection = false
+		return false
+	}
+
 	sshDirectoryMode, err := os.Lstat(expandPath(sshDirectory))
 	if err != nil {
 		if reuseConnection {
@@ -483,7 +496,7 @@ func downloadScript(codeServerPath string) string {
 
 [ "$(uname -m)" != "x86_64" ] && echo "Unsupported server architecture $(uname -m). code-server only has releases for x86_64 systems." && exit 1
 pkill -f %v || true
-mkdir -p ~/.local/share/code-server %v
+mkdir -p $HOME/.local/share/code-server %v
 cd %v
 curlflags="-o latest-linux"
 if [ -f latest-linux ]; then
@@ -494,8 +507,8 @@ curl $curlflags https://codesrv-ci.cdr.sh/latest-linux
 ln latest-linux %v
 chmod +x %v`,
 		codeServerPath,
-		filepath.Dir(codeServerPath),
-		filepath.Dir(codeServerPath),
+		filepath.ToSlash(filepath.Dir(codeServerPath)),
+		filepath.ToSlash(filepath.Dir(codeServerPath)),
 		codeServerPath,
 		codeServerPath,
 		codeServerPath,

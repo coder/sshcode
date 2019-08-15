@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -77,6 +79,11 @@ func (c *rootCmd) Run(fl *flag.FlagSet) {
 		dir = "~"
 	}
 
+	// Get linux relative path if on windows
+	if runtime.GOOS == "windows" {
+		dir = gitbashWindowsDir(dir)
+	}
+
 	err := sshCode(host, dir, options{
 		skipSync:        c.skipSync,
 		sshFlags:        c.sshFlags,
@@ -111,4 +118,16 @@ Arguments:
 		helpTab,
 		helpTab,
 	)
+}
+
+//This section translates a windows path such as "C:\Users\user" to "\Users\user"
+//AND removes the default paths for mingw and git4windows to fix specifying a file path breaking
+func gitbashWindowsDir(dir string) (res string) {
+	res = filepath.ToSlash(dir)
+	res = strings.Replace(res, "C:", "", -1)
+
+	// If you dont use "C:\mingw64" as the location where you installed mingw, copy this and replace /mingw64 with your install path
+	res = strings.Replace(res, "/mingw64", "", -1)
+	res = strings.Replace(res, "/msys", "", -1)
+	return res
 }
