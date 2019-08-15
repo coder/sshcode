@@ -423,7 +423,7 @@ func syncUserSettings(sshFlags string, host string, back bool) error {
 		return err
 	}
 
-	const remoteSettingsDir = "~/.local/share/code-server/User/"
+	const remoteSettingsDir = ".local/share/code-server/User/"
 
 	var (
 		src  = localConfDir + "/"
