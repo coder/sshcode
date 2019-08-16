@@ -79,7 +79,7 @@ func (c *rootCmd) Run(fl *flag.FlagSet) {
 		dir = "~"
 	}
 
-	// Get linux relative path if on windows
+	// Get linux relative path if on windows.
 	if runtime.GOOS == "windows" {
 		dir = gitbashWindowsDir(dir)
 	}
@@ -120,8 +120,9 @@ Arguments:
 	)
 }
 
-//This section translates a windows path such as "C:\Users\user" to "\Users\user"
-//AND removes the default paths for mingw and git4windows to fix specifying a file path breaking
+// This section translates a windows path such as "C:\Users\user" to "\Users\user"
+// and removes the default paths for mingw and git4windows to issues when you
+// specify a file path to start code-server in.
 func gitbashWindowsDir(dir string) (res string) {
 	res = filepath.ToSlash(dir)
 	res = strings.Replace(res, "C:", "", -1)

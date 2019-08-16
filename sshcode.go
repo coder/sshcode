@@ -317,7 +317,6 @@ func checkSSHDirectory(sshDirectory string, reuseConnection bool) bool {
 
 	if runtime.GOOS == "windows" {
 		flog.Info("OS is windows, disabling connection reuse feature")
-		//reuseConnection = false
 		return false
 	}
 
