@@ -41,6 +41,7 @@ type rootCmd struct {
 	noReuseConnection bool
 	bindAddr          string
 	sshFlags          string
+	codeServerPath    string
 }
 
 func (c *rootCmd) Spec() cli.CommandSpec {
@@ -58,6 +59,7 @@ func (c *rootCmd) RegisterFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&c.noReuseConnection, "no-reuse-connection", false, "do not reuse SSH connection via control socket")
 	fl.StringVar(&c.bindAddr, "bind", "", "local bind address for SSH tunnel, in [HOST][:PORT] syntax (default: 127.0.0.1)")
 	fl.StringVar(&c.sshFlags, "ssh-flags", "", "custom SSH flags")
+	fl.StringVar(&c.codeServerPath, "code-server-path", "", "custom code-server binary to upload")
 }
 
 func (c *rootCmd) Run(fl *pflag.FlagSet) {
@@ -84,6 +86,7 @@ func (c *rootCmd) Run(fl *pflag.FlagSet) {
 		bindAddr:        c.bindAddr,
 		syncBack:        c.syncBack,
 		reuseConnection: !c.noReuseConnection,
+		codeServerPath:  c.codeServerPath,
 	})
 
 	if err != nil {
