@@ -564,17 +564,6 @@ func parseGCPSSHCmd(instance string) (ip, sshFlags string, err error) {
 
 	// E.g. foo@1.2.3.4.
 	userIP := toks[len(toks)-1]
-	toks = strings.Split(userIP, "@")
-	// Assume the '<user>@' is missing.
-	if len(toks) < 2 {
-		ip = strings.TrimSpace(toks[0])
-	} else {
-		ip = strings.TrimSpace(toks[1])
-	}
 
-	if net.ParseIP(ip) == nil {
-		return "", "", xerrors.Errorf("parsed invalid ip address %v", ip)
-	}
-
-	return ip, sshFlags, nil
+	return strings.TrimSpace(userIP), sshFlags, nil
 }
