@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"math/rand"
 	"os"
@@ -9,6 +8,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/spf13/pflag"
 
 	"go.coder.com/cli"
 	"go.coder.com/flog"
@@ -52,7 +53,7 @@ func (c *rootCmd) Spec() cli.CommandSpec {
 	}
 }
 
-func (c *rootCmd) RegisterFlags(fl *flag.FlagSet) {
+func (c *rootCmd) RegisterFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&c.skipSync, "skipsync", false, "skip syncing local settings and extensions to remote host")
 	fl.BoolVar(&c.syncBack, "b", false, "sync extensions back on termination")
 	fl.BoolVar(&c.printVersion, "version", false, "print version information and exit")
@@ -61,7 +62,7 @@ func (c *rootCmd) RegisterFlags(fl *flag.FlagSet) {
 	fl.StringVar(&c.sshFlags, "ssh-flags", "", "custom SSH flags")
 }
 
-func (c *rootCmd) Run(fl *flag.FlagSet) {
+func (c *rootCmd) Run(fl *pflag.FlagSet) {
 	if c.printVersion {
 		fmt.Printf("%v\n", version)
 		os.Exit(0)
