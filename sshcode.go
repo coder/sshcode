@@ -29,14 +29,14 @@ const (
 )
 
 type options struct {
-	skipSync        bool
-	syncBack        bool
-	noOpen          bool
-	reuseConnection bool
-	bindAddr        string
-	remotePort      string
-	sshFlags        string
-	codeServerPath  string
+	skipSync         bool
+	syncBack         bool
+	noOpen           bool
+	reuseConnection  bool
+	bindAddr         string
+	remotePort       string
+	sshFlags         string
+	uploadCodeServer string
 }
 
 func sshCode(host, dir string, o options) error {
@@ -78,9 +78,9 @@ func sshCode(host, dir string, o options) error {
 	}
 
 	// Upload local code-server or download code-server from CI server.
-	if o.codeServerPath != "" {
+	if o.uploadCodeServer != "" {
 		flog.Info("uploading local code-server binary...")
-		err = copyCodeServerBinary(o.sshFlags, host, o.codeServerPath, codeServerPath)
+		err = copyCodeServerBinary(o.sshFlags, host, o.uploadCodeServer, codeServerPath)
 		if err != nil {
 			return xerrors.Errorf("failed to upload local code-server binary to remote server: %w", err)
 		}
@@ -428,7 +428,7 @@ func checkSSHMaster(sshMasterCmd *exec.Cmd, sshFlags string, host string) error 
 
 // copyCodeServerBinary copies a code-server binary from local to remote.
 func copyCodeServerBinary(sshFlags string, host string, localPath string, remotePath string) error {
-	if err := ensureFile(localPath); err != nil {
+	if err := validateIsFile(localPath); err != nil {
 		return err
 	}
 
@@ -558,8 +558,8 @@ func ensureDir(path string) error {
 	return nil
 }
 
-// ensureFile tries to stat the specified path and ensure it's a file.
-func ensureFile(path string) error {
+// validateIsFile tries to stat the specified path and ensure it's a file.
+func validateIsFile(path string) error {
 	info, err := os.Stat(path)
 	if err != nil {
 		return err
