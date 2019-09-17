@@ -12,5 +12,5 @@ require (
 	go.coder.com/retry v0.0.0-20180926062817-cf12c95974ac
 	golang.org/x/crypto v0.0.0-20190422183909-d864b10871cd
 	golang.org/x/sys v0.0.0-20190418153312-f0ce4c0180be // indirect
-	golang.org/x/xerrors v0.0.0-20190410155217-1f06c39b4373
+	golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7
 )
