@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"os"
-	"path/filepath"
+	"os/exec"
+
 	"runtime"
 	"strings"
 	"time"
@@ -128,11 +130,15 @@ Arguments:
 // and removes the default paths for mingw and git4windows to issues when you
 // specify a file path to start code-server in.
 func gitbashWindowsDir(dir string) (res string) {
-	res = filepath.ToSlash(dir)
-	res = strings.Replace(res, "C:", "", -1)
-
-	// If you dont use "C:\mingw64" as the location where you installed mingw, copy this and replace /mingw64 with your install path
-	res = strings.Replace(res, "/mingw64", "", -1)
-	res = strings.Replace(res, "/msys", "", -1)
+	out, err := exec.Command("mount").Output()
+	if err != nil {
+		log.Fatal(err)
+	}
+	lines := strings.Split(string(out), "\n")
+	for _, line := range lines {
+		if strings.Index(line, "on / type") != -1 {
+			res = strings.Replace(line, "on / type ntfs (binary,noacl,auto)", "", -1)
+		}
+	}
 	return res
 }
