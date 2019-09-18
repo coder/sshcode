@@ -42,6 +42,7 @@ type rootCmd struct {
 	bindAddr          string
 	sshFlags          string
 	uploadCodeServer  string
+	codeServerVersion string
 }
 
 func (c *rootCmd) Spec() cli.CommandSpec {
@@ -59,7 +60,8 @@ func (c *rootCmd) RegisterFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&c.noReuseConnection, "no-reuse-connection", false, "do not reuse SSH connection via control socket")
 	fl.StringVar(&c.bindAddr, "bind", "", "local bind address for SSH tunnel, in [HOST][:PORT] syntax (default: 127.0.0.1)")
 	fl.StringVar(&c.sshFlags, "ssh-flags", "", "custom SSH flags")
-	fl.StringVar(&c.uploadCodeServer, "upload-code-server", "", "custom code-server binary to upload to the remote host")
+	fl.StringVar(&c.uploadCodeServer, "upload-code-server", "", "custom code-server binary to upload to the remote host, takes precedence over --code-server-version")
+	fl.StringVar(&c.codeServerVersion, "code-server-version", defaultCodeServerVersion, `custom code-server version to download on the remote host, accepts any release name, "latest", or "latest-preview" (changing this may cause issues)`)
 }
 
 func (c *rootCmd) Run(fl *pflag.FlagSet) {
@@ -81,12 +83,13 @@ func (c *rootCmd) Run(fl *pflag.FlagSet) {
 	}
 
 	err := sshCode(host, dir, options{
-		skipSync:         c.skipSync,
-		sshFlags:         c.sshFlags,
-		bindAddr:         c.bindAddr,
-		syncBack:         c.syncBack,
-		reuseConnection:  !c.noReuseConnection,
-		uploadCodeServer: c.uploadCodeServer,
+		skipSync:          c.skipSync,
+		sshFlags:          c.sshFlags,
+		bindAddr:          c.bindAddr,
+		syncBack:          c.syncBack,
+		reuseConnection:   !c.noReuseConnection,
+		uploadCodeServer:  c.uploadCodeServer,
+		codeServerVersion: c.codeServerVersion,
 	})
 
 	if err != nil {

@@ -20,7 +20,10 @@ import (
 	"golang.org/x/xerrors"
 )
 
-const codeServerPath = "~/.cache/sshcode/sshcode-server"
+const (
+	codeServerPath           = "~/.cache/sshcode/sshcode-server"
+	defaultCodeServerVersion = "latest-preview"
+)
 
 const (
 	sshDirectory               = "~/.ssh"
@@ -29,14 +32,15 @@ const (
 )
 
 type options struct {
-	skipSync         bool
-	syncBack         bool
-	noOpen           bool
-	reuseConnection  bool
-	bindAddr         string
-	remotePort       string
-	sshFlags         string
-	uploadCodeServer string
+	skipSync          bool
+	syncBack          bool
+	noOpen            bool
+	reuseConnection   bool
+	bindAddr          string
+	remotePort        string
+	sshFlags          string
+	uploadCodeServer  string
+	codeServerVersion string
 }
 
 func sshCode(host, dir string, o options) error {
@@ -58,6 +62,10 @@ func sshCode(host, dir string, o options) error {
 	}
 	if err != nil {
 		return xerrors.Errorf("failed to find available remote port: %w", err)
+	}
+
+	if o.codeServerVersion == "" {
+		o.codeServerVersion = defaultCodeServerVersion
 	}
 
 	// Check the SSH directory's permissions and warn the user if it is not safe.
@@ -102,7 +110,7 @@ func sshCode(host, dir string, o options) error {
 		}
 	} else {
 		flog.Info("ensuring code-server is updated...")
-		dlScript := downloadScript(codeServerPath)
+		dlScript := downloadScript(o.codeServerVersion, codeServerPath)
 
 		// Downloads the latest code-server and allows it to be executed.
 		sshCmdStr := fmt.Sprintf("ssh %v %v '/usr/bin/env bash -l'", o.sshFlags, host)
@@ -145,8 +153,8 @@ func sshCode(host, dir string, o options) error {
 	flog.Info("Tunneling remote port %v to %v", o.remotePort, o.bindAddr)
 
 	sshCmdStr :=
-		fmt.Sprintf("ssh -tt -q -L %v:localhost:%v %v %v 'cd %v; %v --host 127.0.0.1 --allow-http --no-auth --port=%v'",
-			o.bindAddr, o.remotePort, o.sshFlags, host, dir, codeServerPath, o.remotePort,
+		fmt.Sprintf("ssh -tt -q -L %v:localhost:%v %v %v 'cd %v; %v --host 127.0.0.1 --port %v %v'",
+			o.bindAddr, o.remotePort, o.sshFlags, host, dir, codeServerPath, o.remotePort, dir,
 		)
 
 	// Starts code-server and forwards the remote port.
@@ -518,7 +526,18 @@ func rsync(src string, dest string, sshFlags string, excludePaths ...string) err
 	return nil
 }
 
-func downloadScript(codeServerPath string) string {
+func downloadURL(codeServerVersion string) string {
+	const baseURL = "https://codesrv-ci.cdr.sh"
+
+	if codeServerVersion == "latest" || codeServerVersion == "latest-preview" {
+		return fmt.Sprintf("%v/%v-linux", baseURL, codeServerVersion)
+	}
+	return fmt.Sprintf("%v/releases/%v/linux-x86_64/code-server", baseURL, codeServerVersion)
+}
+
+func downloadScript(codeServerVersion string, codeServerPath string) string {
+	url := downloadURL(codeServerVersion)
+
 	return fmt.Sprintf(
 		`set -euxo pipefail || exit 1
 
@@ -526,17 +545,25 @@ func downloadScript(codeServerPath string) string {
 pkill -f %v || true
 mkdir -p ~/.local/share/code-server %v
 cd %v
+if [ ! -f last-version ] || [ "$(cat last-version)" != "%v" ]; then
+	rm latest-linux %v
+fi
+echo %v > last-version
 curlflags="-o latest-linux"
 if [ -f latest-linux ]; then
 	curlflags="$curlflags -z latest-linux"
 fi
-curl $curlflags https://codesrv-ci.cdr.sh/latest-linux
+curl $curlflags "%v"
 [ -f %v ] && rm %v
 ln latest-linux %v
 chmod +x %v`,
 		codeServerPath,
 		filepath.Dir(codeServerPath),
 		filepath.Dir(codeServerPath),
+		codeServerVersion,
+		codeServerPath,
+		codeServerVersion,
+		url,
 		codeServerPath,
 		codeServerPath,
 		codeServerPath,
