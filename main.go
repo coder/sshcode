@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
-
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -130,6 +130,7 @@ Arguments:
 // and removes the default paths for mingw and git4windows to issues when you
 // specify a file path to start code-server in.
 func gitbashWindowsDir(dir string) (res string) {
+	res = filepath.ToSlash(dir)
 	out, err := exec.Command("mount").Output()
 	if err != nil {
 		log.Fatal(err)
@@ -137,8 +138,9 @@ func gitbashWindowsDir(dir string) (res string) {
 	lines := strings.Split(string(out), "\n")
 	for _, line := range lines {
 		if strings.Index(line, "on / type") != -1 {
-			res = strings.Replace(line, "on / type ntfs (binary,noacl,auto)", "", -1)
+			line = strings.Replace(line, "on / type ntfs (binary,noacl,auto)", "", -1)
 		}
+		res = strings.Replace(res, line, "", -1)
 	}
 	return res
 }
