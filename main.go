@@ -138,9 +138,9 @@ func gitbashWindowsDir(dir string) (res string) {
 	lines := strings.Split(string(out), "\n")
 	for _, line := range lines {
 		if strings.Index(line, "on / type") != -1 {
-			line = strings.Replace(line, "on / type ntfs (binary,noacl,auto)", "", -1)
+			line = strings.Replace(line, " on / type ntfs (binary,noacl,auto)", "", -1)
 		}
-		res = strings.Replace(res, line, "", -1)
+		res = strings.TrimPrefix(dir, line)
 	}
 	return res
 }
