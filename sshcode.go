@@ -560,6 +560,9 @@ chmod +x %v`,
 func ensureDir(path string) error {
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {
+		if runtime.GOOS == "windows" && strings.HasPrefix(path, "/c/") {
+			path = path[3:]
+		}
 		err = os.MkdirAll(path, 0750)
 	}
 
