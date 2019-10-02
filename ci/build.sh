@@ -10,8 +10,8 @@ build(){
 	go build -ldflags "-X main.version=${tag}" -o $tmpdir/sshcode
 
 	pushd $tmpdir
-	tarname=sshcode-$GOOS-$GOARCH.tar
-	tar -cf $tarname sshcode
+	tarname=sshcode-$GOOS-$GOARCH.tar.gz
+	tar -czf $tarname sshcode
 	popd	
 	cp $tmpdir/$tarname bin
 	rm -rf $tmpdir
