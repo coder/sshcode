@@ -146,7 +146,7 @@ func sshCode(host, dir string, o options) error {
 	flog.Info("Tunneling remote port %v to %v", o.remotePort, o.bindAddr)
 
 	sshCmdStr :=
-		fmt.Sprintf("ssh -tt -q -L %v:localhost:%v %v %v 'cd %v; %v --host 127.0.0.1 --allow-http --no-auth --port=%v'",
+		fmt.Sprintf("ssh -tt -q -L %v:localhost:%v %v %v 'cd %v; %v --host 127.0.0.1 --auth none --port=%v'",
 			o.bindAddr, o.remotePort, o.sshFlags, host, dir, codeServerPath, o.remotePort,
 		)
 
