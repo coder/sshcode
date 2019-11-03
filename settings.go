@@ -48,3 +48,19 @@ func extensionsDir() (string, error) {
 	}
 	return filepath.Clean(path), nil
 }
+
+func windowsVarFix(input string) string {
+	var remoteSettingsDir = "~/.local/share/code-server/User/"
+	var remoteExtensionsDir = "~/.local/share/code-server/extensions/"
+	if runtime.GOOS == "windows" {
+		remoteSettingsDir = ".local/share/code-server/User/"
+		remoteExtensionsDir = ".local/share/code-server/extensions/"
+	}
+
+	if input == "remoteSettingsDir" {
+		return remoteSettingsDir
+	} else if input == "remoteExtensionsDir" {
+		return remoteExtensionsDir
+	}
+	return ""
+}
