@@ -29,8 +29,8 @@ var (
 	helpTab = strings.Repeat(" ", helpTabWidth)
 	// version is overwritten by ci/build.sh.
 	version string
-	res 	string
-	dir		string
+	res     string
+	dir     string
 )
 
 func main() {
