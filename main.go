@@ -7,7 +7,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -27,6 +29,8 @@ var (
 	helpTab = strings.Repeat(" ", helpTabWidth)
 	// version is overwritten by ci/build.sh.
 	version string
+	res 	string
+	dir		string
 )
 
 func main() {
@@ -126,21 +130,49 @@ Arguments:
 	)
 }
 
-// This section translates a windows path such as "C:\Users\user" to "\Users\user"
+// This section translates a windows path such as "C:\Users\user" to "/Users/user"
 // and removes the default paths for mingw and git4windows to issues when you
 // specify a file path to start code-server in.
-func gitbashWindowsDir(dir string) (res string) {
-	res = filepath.ToSlash(dir)
+func gitbashWindowsDir(dir string) string {
+	if dir == "~" { //Special case
+		return "~/"
+	}
+	mountPoints := gitbashMountPointsAndHome()
+
+	// Apply mount points
+	absDir, _ := filepath.Abs(dir)
+	absDir = filepath.ToSlash(absDir)
+	for _, mp := range mountPoints {
+		if strings.HasPrefix(absDir, mp[0]) {
+			resolved := strings.Replace(absDir, mp[0], mp[1], 1)
+			flog.Info("Resolved windows path '%s' to '%s", dir, resolved)
+			return resolved
+		}
+	}
+	return dir
+}
+
+// This function returns an array with MINGW64 mount points including relative home dir
+func gitbashMountPointsAndHome() [][]string {
+	// Initialize mount points with home dir
+	mountPoints := [][]string{{filepath.ToSlash(os.Getenv("HOME")), "~"}}
+	// Load mount points
 	out, err := exec.Command("mount").Output()
 	if err != nil {
 		log.Fatal(err)
 	}
 	lines := strings.Split(string(out), "\n")
+	var mountRx = regexp.MustCompile(`^(.*) on (.*) type`)
 	for _, line := range lines {
-		if strings.Index(line, "on / type") != -1 {
-			line = strings.Replace(line, " on / type ntfs (binary,noacl,auto)", "", -1)
+		extract := mountRx.FindStringSubmatch(line)
+		if len(extract) > 0 {
+			mountPoints = append(mountPoints, []string{extract[1], extract[2]})
 		}
 		res = strings.TrimPrefix(dir, line)
 	}
-	return res
+	// Sort by size to get more restrictive mount points first
+	sort.Slice(mountPoints, func(i, j int) bool {
+		return len(mountPoints[i][0]) > len(mountPoints[j][0])
+	})
+	return mountPoints
 }
