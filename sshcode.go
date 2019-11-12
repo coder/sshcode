@@ -265,9 +265,9 @@ func openBrowser(url string) {
 	var openCmd *exec.Cmd
 
 	const (
-		macPath  = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-		wslPath  = "/mnt/c/Program Files (x86)/Google/Chrome/Application/chrome.exe"
-		msysPath = "/Program Files (x86)/Google/Chrome/Application/chrome.exe"
+		macPath = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+		wslPath = "/mnt/c/Program Files (x86)/Google/Chrome/Application/chrome.exe"
+		winPath = "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe"
 	)
 
 	switch {
@@ -285,8 +285,8 @@ func openBrowser(url string) {
 		openCmd = exec.Command(macPath, chromeOptions(url)...)
 	case pathExists(wslPath):
 		openCmd = exec.Command(wslPath, chromeOptions(url)...)
-	case pathExists(msysPath):
-		openCmd = exec.Command(msysPath, chromeOptions(url)...)
+	case pathExists(winPath):
+		openCmd = exec.Command(winPath, chromeOptions(url)...)
 	default:
 		err := browser.OpenURL(url)
 		if err != nil {
