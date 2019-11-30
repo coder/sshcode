@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"math/rand"
 	"net"
 	"net/http"
@@ -10,7 +11,9 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"syscall"
@@ -107,7 +110,6 @@ func sshCode(host, dir string, o options) error {
 
 		// Downloads the latest code-server and allows it to be executed.
 		sshCmdStr := fmt.Sprintf("ssh %v %v '/usr/bin/env bash -l'", o.sshFlags, host)
-
 		sshCmd := exec.Command("sh", "-l", "-c", sshCmdStr)
 		sshCmd.Stdout = os.Stdout
 		sshCmd.Stderr = os.Stderr
@@ -146,10 +148,9 @@ func sshCode(host, dir string, o options) error {
 	flog.Info("Tunneling remote port %v to %v", o.remotePort, o.bindAddr)
 
 	sshCmdStr :=
-		fmt.Sprintf("ssh -tt -q -L %v:localhost:%v %v %v 'cd %v; %v --host 127.0.0.1 --auth none --port=%v'",
-			o.bindAddr, o.remotePort, o.sshFlags, host, dir, codeServerPath, o.remotePort,
+		fmt.Sprintf("ssh -tt -q -L %v:localhost:%v %v %v '%v  %v --host 127.0.0.1 --auth none --port=%v'",
+			o.bindAddr, o.remotePort, o.sshFlags, host, codeServerPath, dir, o.remotePort,
 		)
-
 	// Starts code-server and forwards the remote port.
 	sshCmd := exec.Command("sh", "-l", "-c", sshCmdStr)
 	sshCmd.Stdin = os.Stdin
@@ -341,7 +342,6 @@ func randomPort() (string, error) {
 // checkSSHDirectory performs sanity and safety checks on sshDirectory, and
 // returns a new value for o.reuseConnection depending on the checks.
 func checkSSHDirectory(sshDirectory string, reuseConnection bool) bool {
-
 	if runtime.GOOS == "windows" {
 		flog.Info("OS is windows, disabling connection reuse feature")
 		return false
@@ -463,8 +463,8 @@ func syncUserSettings(sshFlags string, host string, back bool) error {
 		return err
 	}
 
-	//const remoteSettingsDir = ".local/share/code-server/User/"
-	var remoteSettingsDir = windowsVarFix("remoteSettingsDir")
+	var remoteSettingsDir = windowsVarFix(".local/share/code-server/User/")
+
 	var (
 		src  = localConfDir + "/"
 		dest = host + ":" + remoteSettingsDir
@@ -489,8 +489,7 @@ func syncExtensions(sshFlags string, host string, back bool) error {
 		return err
 	}
 
-	//const remoteExtensionsDir = ".local/share/code-server/extensions/"
-	var remoteExtensionsDir = windowsVarFix("remoteExtensionsDir")
+	var remoteExtensionsDir = windowsVarFix(".local/share/code-server/extensions/")
 
 	var (
 		src  = localExtensionsDir + "/"
@@ -561,8 +560,10 @@ chmod +x %v`,
 func ensureDir(path string) error {
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {
+		// This fixes a issue where GO reads `/c/` as `C:\c\` and creates
+		// empty directories on HOST/CLIENT that dont need to exist
 		if runtime.GOOS == "windows" && strings.HasPrefix(path, "/c/") {
-			path = path[3:]
+			path = "C:" + path[2:]
 		}
 		err = os.MkdirAll(path, 0750)
 	}
@@ -623,4 +624,74 @@ func parseGCPSSHCmd(instance string) (ip, sshFlags string, err error) {
 	userIP := toks[len(toks)-1]
 
 	return strings.TrimSpace(userIP), sshFlags, nil
+}
+
+// gitbashMountPoints returns all mount points in a msys2 system and then trunicates
+// the mount point for `/` from the path provided (dir), this is done to fix an
+// issue with how msys2 provides file paths to go, example. When you feed a filepath
+// as user input to go, `command /opt` for example, msys2 will pass `C:\<path to msys2 directory>\opt`
+// This causes an issue whith this program where when you run `sshcode.exe user@server /opt`,
+// GO and msys2 will attempt to pass `C:\<path to msys2 directory>\opt` to the server.
+// This function is used to prevent this.
+func gitbashWindowsDir(dir string) string {
+
+	// if dir is left empty, line82:main.go will set it to `~`, this makes it so that
+	// if dir is `~`, return `~/` instead of continuing with the gitbashWindowsDir()
+	// function. this prevens windows from trying to send a litteral instead of a relative
+	if dir == "~" {
+		return "~/"
+	}
+
+	//If msys feeds a `C:` path, clense
+	if strings.HasPrefix(dir, "C:") {
+		mountPoints := gitbashMountPointsAndHome()
+
+		// Apply mount points
+		absDir, _ := filepath.Abs(dir)
+		absDir = filepath.ToSlash(absDir)
+		for _, mp := range mountPoints {
+			if strings.HasPrefix(absDir, mp[0]) {
+				resolved := strings.Replace(absDir, mp[0], mp[1], 1)
+
+				// Sometimes the resolved path can go from user input `/Workspace`
+				// to `//Workspace`, this if statement checks that and removes it
+				if strings.HasPrefix(resolved, "//") {
+					resolved = strings.TrimPrefix(resolved, "/")
+					flog.Info("Resolved windows path '%s' to '%s", dir, resolved)
+					return resolved
+				}
+
+				flog.Info("Resolved windows path '%s' to '%s", dir, resolved)
+				return resolved
+			}
+		}
+
+	}
+	return dir
+}
+
+// This function returns an array with MINGW64 mount points including relative home dir
+func gitbashMountPointsAndHome() [][]string {
+	mountPoints := [][]string{{filepath.ToSlash(os.Getenv("HOME")), "~"}}
+
+	// Load mount points
+	out, err := exec.Command("mount").Output()
+	if err != nil {
+		//log.Error(err)
+		log.Println(err)
+	}
+	lines := strings.Split(string(out), "\n")
+	var mountRx = regexp.MustCompile(`^(.*) on (.*) type`)
+	for _, line := range lines {
+		extract := mountRx.FindStringSubmatch(line)
+		if len(extract) > 0 {
+			mountPoints = append(mountPoints, []string{extract[1], extract[2]})
+		}
+	}
+
+	// Sort by size to get more restrictive mount points first
+	sort.Slice(mountPoints, func(i, j int) bool {
+		return len(mountPoints[i][0]) > len(mountPoints[j][0])
+	})
+	return mountPoints
 }
