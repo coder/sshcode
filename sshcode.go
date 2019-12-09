@@ -214,7 +214,7 @@ func sshCode(host, dir string, o options) error {
 
 	err = syncUserSettings(o.sshFlags, host, true)
 	if err != nil {
-		return xerrors.Errorf("failed to sync user settings settings back: %w", err)
+		return xerrors.Errorf("failed to sync user settings back: %w", err)
 	}
 
 	return nil
