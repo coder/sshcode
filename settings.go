@@ -48,11 +48,3 @@ func extensionsDir() (string, error) {
 	}
 	return filepath.Clean(path), nil
 }
-
-func windowsVarFix(input string) string {
-	if runtime.GOOS == "windows" {
-		return input
-	}
-
-	return "~/" + input
-}

@@ -463,7 +463,10 @@ func syncUserSettings(sshFlags string, host string, back bool) error {
 		return err
 	}
 
-	var remoteSettingsDir = windowsVarFix(".local/share/code-server/User/")
+	var remoteSettingsDir = "~/.local/share/code-server/User/"
+	if runtime.GOOS == "windows" {
+		remoteSettingsDir = ".local/share/code-server/User/"
+	}
 
 	var (
 		src  = localConfDir + "/"
@@ -489,8 +492,10 @@ func syncExtensions(sshFlags string, host string, back bool) error {
 		return err
 	}
 
-	var remoteExtensionsDir = windowsVarFix(".local/share/code-server/extensions/")
-
+	var remoteExtensionsDir = "~/.local/share/code-server/extensions/"
+	if runtime.GOOS == "windows" {
+		remoteExtensionsDir = ".local/share/code-server/extensions/"
+	}
 	var (
 		src  = localExtensionsDir + "/"
 		dest = host + ":" + remoteExtensionsDir
@@ -517,6 +522,7 @@ func rsync(src string, dest string, sshFlags string, excludePaths ...string) err
 		// locally in order to properly delete an extension.
 		"--delete",
 		"--copy-unsafe-links",
+		"-zz",
 		src, dest,
 	)...,
 	)
