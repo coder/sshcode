@@ -264,27 +264,27 @@ func openBrowser(url string) {
 
 	const (
 		macPath = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-		wslPath = "/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge_proxy.exe"
-		winPath = "C:/Program Files (x86)/Microsoft/Edge/Application/msedge_proxy.exe"
+		wslPath = "/mnt/c/Program Files (x86)/Google/Chrome/Application/chrome.exe"
+		winPath = "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe"
 	)
 
 	switch {
+	case commandExists("chrome"):
+		openCmd = exec.Command("chrome", chromeOptions(url)...)
+	case commandExists("google-chrome"):
+		openCmd = exec.Command("google-chrome", chromeOptions(url)...)
+	case commandExists("google-chrome-stable"):
+		openCmd = exec.Command("google-chrome-stable", chromeOptions(url)...)
+	case commandExists("chromium"):
+		openCmd = exec.Command("chromium", chromeOptions(url)...)
+	case commandExists("chromium-browser"):
+		openCmd = exec.Command("chromium-browser", chromeOptions(url)...)
 	case pathExists(macPath):
 		openCmd = exec.Command(macPath, chromeOptions(url)...)
 	case pathExists(wslPath):
 		openCmd = exec.Command(wslPath, chromeOptions(url)...)
 	case pathExists(winPath):
 		openCmd = exec.Command(winPath, chromeOptions(url)...)
-		//	case commandExists("chrome"):
-		//		openCmd = exec.Command("chrome", chromeOptions(url)...)
-		//	case commandExists("google-chrome"):
-		//		openCmd = exec.Command("google-chrome", chromeOptions(url)...)
-		//	case commandExists("google-chrome-stable"):
-		//		openCmd = exec.Command("google-chrome-stable", chromeOptions(url)...)
-		//	case commandExists("chromium"):
-		//		openCmd = exec.Command("chromium", chromeOptions(url)...)
-		//	case commandExists("chromium-browser"):
-		//		openCmd = exec.Command("chromium-browser", chromeOptions(url)...)
 
 	default:
 		err := browser.OpenURL(url)
@@ -461,10 +461,7 @@ func syncUserSettings(sshFlags string, host string, back bool) error {
 		return err
 	}
 
-	var remoteSettingsDir = "~/.local/share/code-server/User/"
-	if runtime.GOOS == "windows" {
-		remoteSettingsDir = ".local/share/code-server/User/"
-	}
+	var remoteSettingsDir = windowsVarFix(".local/share/code-server/User/")
 
 	var (
 		src  = localConfDir + "/"
@@ -490,10 +487,8 @@ func syncExtensions(sshFlags string, host string, back bool) error {
 		return err
 	}
 
-	var remoteExtensionsDir = "~/.local/share/code-server/extensions/"
-	if runtime.GOOS == "windows" {
-		remoteExtensionsDir = ".local/share/code-server/extensions/"
-	}
+	var remoteExtensionsDir = windowsVarFix(".local/share/code-server/extensions/")
+
 	var (
 		src  = localExtensionsDir + "/"
 		dest = host + ":" + remoteExtensionsDir
@@ -520,7 +515,6 @@ func rsync(src string, dest string, sshFlags string, excludePaths ...string) err
 		// locally in order to properly delete an extension.
 		"--delete",
 		"--copy-unsafe-links",
-		"-zz",
 		src, dest,
 	)...,
 	)
