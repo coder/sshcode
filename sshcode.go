@@ -630,26 +630,31 @@ func parseGCPSSHCmd(instance string) (ip, sshFlags string, err error) {
 	return strings.TrimSpace(userIP), sshFlags, nil
 }
 
-// When the user passes a path such as `/Workspace`, msys2 gives sshcode `C:/msys64/Worksapce`, which is not a valid remote path
+// gitbashWindowsDir strips a the msys2 install directory from the beginning of
+// the path. On msys2, if a user provides `/workspace` sshcode will receive
+// `C:/msys64/workspace` which won't work on the remote host.
 func gitbashWindowsDir(dir string) string {
 
-	// if dir is left empty, line82:main.go will set it to `~`, this makes it so that
-	// if dir is `~`, return `~/` instead of continuing with the gitbashWindowsDir()
-	// function. this prevens windows from trying to send a litteral instead of a relative
-	if dir == "~" {
-		return "~/"
+	// Don't bother figuring out path if it's relative to home dir.
+	if strings.HasPrefix(dir, "~/") {
+		if dir == "~" {
+			return "~/"
+		}
+		return dir
 	}
-	mingwPrefix, _ := exec.Command("sh", "-c", "{ cd / && pwd -W; }").Output()
+
+	mingwPrefix, err := exec.Command("sh", "-c", "{ cd / && pwd -W; }").Output()
+	if err != nil {
+		// Default to a sane location.
+		mingwPrefix = []byte("C:/mingw64")
+	}
+
 	prefix := strings.TrimSuffix(string(mingwPrefix), "/\n")
 
-	// `pwd -W` returns a new line, not good so this removes
 	if strings.HasPrefix(dir, prefix) {
-		fmt.Println(prefix + dir)
 		resolved := strings.TrimPrefix(dir, prefix)
-		fmt.Println(resolved + dir)
 		flog.Info("Resolved windows path '%s' to '%s", dir, resolved)
 		return resolved
 	}
-
 	return dir
 }
