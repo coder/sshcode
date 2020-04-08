@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"math/rand"
 	"net"
 	"net/http"
@@ -11,9 +10,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"regexp"
 	"runtime"
-	"sort"
 	"strconv"
 	"strings"
 	"syscall"
@@ -267,27 +264,28 @@ func openBrowser(url string) {
 
 	const (
 		macPath = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-		wslPath = "/mnt/c/Program Files (x86)/Google/Chrome/Application/chrome.exe"
-		winPath = "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe"
+		wslPath = "/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge_proxy.exe"
+		winPath = "C:/Program Files (x86)/Microsoft/Edge/Application/msedge_proxy.exe"
 	)
 
 	switch {
-	case commandExists("chrome"):
-		openCmd = exec.Command("chrome", chromeOptions(url)...)
-	case commandExists("google-chrome"):
-		openCmd = exec.Command("google-chrome", chromeOptions(url)...)
-	case commandExists("google-chrome-stable"):
-		openCmd = exec.Command("google-chrome-stable", chromeOptions(url)...)
-	case commandExists("chromium"):
-		openCmd = exec.Command("chromium", chromeOptions(url)...)
-	case commandExists("chromium-browser"):
-		openCmd = exec.Command("chromium-browser", chromeOptions(url)...)
 	case pathExists(macPath):
 		openCmd = exec.Command(macPath, chromeOptions(url)...)
 	case pathExists(wslPath):
 		openCmd = exec.Command(wslPath, chromeOptions(url)...)
 	case pathExists(winPath):
 		openCmd = exec.Command(winPath, chromeOptions(url)...)
+		//	case commandExists("chrome"):
+		//		openCmd = exec.Command("chrome", chromeOptions(url)...)
+		//	case commandExists("google-chrome"):
+		//		openCmd = exec.Command("google-chrome", chromeOptions(url)...)
+		//	case commandExists("google-chrome-stable"):
+		//		openCmd = exec.Command("google-chrome-stable", chromeOptions(url)...)
+		//	case commandExists("chromium"):
+		//		openCmd = exec.Command("chromium", chromeOptions(url)...)
+		//	case commandExists("chromium-browser"):
+		//		openCmd = exec.Command("chromium-browser", chromeOptions(url)...)
+
 	default:
 		err := browser.OpenURL(url)
 		if err != nil {
@@ -632,13 +630,7 @@ func parseGCPSSHCmd(instance string) (ip, sshFlags string, err error) {
 	return strings.TrimSpace(userIP), sshFlags, nil
 }
 
-// gitbashMountPoints returns all mount points in a msys2 system and then trunicates
-// the mount point for `/` from the path provided (dir), this is done to fix an
-// issue with how msys2 provides file paths to go, example. When you feed a filepath
-// as user input to go, `command /opt` for example, msys2 will pass `C:\<path to msys2 directory>\opt`
-// This causes an issue whith this program where when you run `sshcode.exe user@server /opt`,
-// GO and msys2 will attempt to pass `C:\<path to msys2 directory>\opt` to the server.
-// This function is used to prevent this.
+// When the user passes a path such as `/Workspace`, msys2 gives sshcode `C:/msys64/Worksapce`, which is not a valid remote path
 func gitbashWindowsDir(dir string) string {
 
 	// if dir is left empty, line82:main.go will set it to `~`, this makes it so that
@@ -647,57 +639,17 @@ func gitbashWindowsDir(dir string) string {
 	if dir == "~" {
 		return "~/"
 	}
+	mingwPrefix, _ := exec.Command("sh", "-c", "{ cd / && pwd -W; }").Output()
+	prefix := strings.TrimSuffix(string(mingwPrefix), "/\n")
 
-	//If msys feeds a `C:` path, clense
-	if strings.HasPrefix(dir, "C:") {
-		mountPoints := gitbashMountPointsAndHome()
-
-		// Apply mount points
-		absDir, _ := filepath.Abs(dir)
-		absDir = filepath.ToSlash(absDir)
-		for _, mp := range mountPoints {
-			if strings.HasPrefix(absDir, mp[0]) {
-				resolved := strings.Replace(absDir, mp[0], mp[1], 1)
-
-				// Sometimes the resolved path can go from user input `/Workspace`
-				// to `//Workspace`, this if statement checks that and removes it
-				if strings.HasPrefix(resolved, "//") {
-					resolved = strings.TrimPrefix(resolved, "/")
-					flog.Info("Resolved windows path '%s' to '%s", dir, resolved)
-					return resolved
-				}
-
-				flog.Info("Resolved windows path '%s' to '%s", dir, resolved)
-				return resolved
-			}
-		}
-
+	// `pwd -W` returns a new line, not good so this removes
+	if strings.HasPrefix(dir, prefix) {
+		fmt.Println(prefix + dir)
+		resolved := strings.TrimPrefix(dir, prefix)
+		fmt.Println(resolved + dir)
+		flog.Info("Resolved windows path '%s' to '%s", dir, resolved)
+		return resolved
 	}
+
 	return dir
-}
-
-// This function returns an array with MINGW64 mount points including relative home dir
-func gitbashMountPointsAndHome() [][]string {
-	mountPoints := [][]string{{filepath.ToSlash(os.Getenv("HOME")), "~"}}
-
-	// Load mount points
-	out, err := exec.Command("mount").Output()
-	if err != nil {
-		//log.Error(err)
-		log.Println(err)
-	}
-	lines := strings.Split(string(out), "\n")
-	var mountRx = regexp.MustCompile(`^(.*) on (.*) type`)
-	for _, line := range lines {
-		extract := mountRx.FindStringSubmatch(line)
-		if len(extract) > 0 {
-			mountPoints = append(mountPoints, []string{extract[1], extract[2]})
-		}
-	}
-
-	// Sort by size to get more restrictive mount points first
-	sort.Slice(mountPoints, func(i, j int) bool {
-		return len(mountPoints[i][0]) > len(mountPoints[j][0])
-	})
-	return mountPoints
 }
