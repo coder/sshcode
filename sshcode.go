@@ -564,8 +564,8 @@ chmod +x %v`,
 func ensureDir(path string) error {
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {
-		// This fixes a issue where GO reads `/c/` as `C:\c\` and creates
-		// empty directories on HOST/CLIENT that dont need to exist
+		// This fixes a issue where Go reads `/c/` as `C:\c\` and creates
+		// empty directories on the client that don't need to
 		if runtime.GOOS == "windows" && strings.HasPrefix(path, "/c/") {
 			path = "C:" + path[2:]
 		}
