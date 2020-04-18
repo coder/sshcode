@@ -285,7 +285,6 @@ func openBrowser(url string) {
 		openCmd = exec.Command(wslPath, chromeOptions(url)...)
 	case pathExists(winPath):
 		openCmd = exec.Command(winPath, chromeOptions(url)...)
-
 	default:
 		err := browser.OpenURL(url)
 		if err != nil {
@@ -565,7 +564,7 @@ func ensureDir(path string) error {
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {
 		// This fixes a issue where Go reads `/c/` as `C:\c\` and creates
-		// empty directories on the client that don't need to
+		// empty directories on the client that don't need to exist
 		if runtime.GOOS == "windows" && strings.HasPrefix(path, "/c/") {
 			path = "C:" + path[2:]
 		}
