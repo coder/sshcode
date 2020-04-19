@@ -564,7 +564,7 @@ func ensureDir(path string) error {
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {
 		// This fixes a issue where Go reads `/c/` as `C:\c\` and creates
-		// empty directories on the client that don't need to exist
+		// empty directories on the client that don't need to exist.
 		if runtime.GOOS == "windows" && strings.HasPrefix(path, "/c/") {
 			path = "C:" + path[2:]
 		}
