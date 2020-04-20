@@ -652,7 +652,6 @@ func gitbashWindowsDir(dir string) string {
 
 	if strings.HasPrefix(dir, prefix) {
 		resolved := strings.TrimPrefix(dir, prefix)
-		flog.Info("Resolved windows path '%s' to '%s", dir, resolved)
 		return resolved
 	}
 	return dir
