@@ -649,10 +649,5 @@ func gitbashWindowsDir(dir string) string {
 	}
 
 	prefix := strings.TrimSuffix(string(mingwPrefix), "/\n")
-
-	if strings.HasPrefix(dir, prefix) {
-		resolved := strings.TrimPrefix(dir, prefix)
-		return resolved
-	}
-	return dir
+	return strings.TrimPrefix(dir, prefix)
 }
