@@ -142,7 +142,8 @@ func sshCode(host, dir string, o options) error {
 	}
 
 	codeServerFlags := []string{
-		fmt.Sprintf("--bind-addr 127.0.0.1:%v", o.remotePort),
+		"--host 127.0.0.1",
+		fmt.Sprintf("--port %v", o.remotePort),
 		"--auth none",
 	}
 	if o.disableTelemetry {
