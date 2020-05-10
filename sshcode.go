@@ -34,6 +34,7 @@ type options struct {
 	syncBack         bool
 	noOpen           bool
 	reuseConnection  bool
+	disableTelemetry bool
 	bindAddr         string
 	remotePort       string
 	sshFlags         string
@@ -140,13 +141,22 @@ func sshCode(host, dir string, o options) error {
 		flog.Info("synced extensions in %s", time.Since(start))
 	}
 
+	codeServerFlags := []string{
+		fmt.Sprintf("--bind-addr 127.0.0.1:%v", o.remotePort),
+		"--auth none",
+	}
+	if o.disableTelemetry {
+		codeServerFlags = append(codeServerFlags, "--disable-telemetry")
+	}
+	codeServerCmdStr := fmt.Sprintf("%v %v %v", codeServerPath, dir, strings.Join(codeServerFlags, " "))
+
 	flog.Info("starting code-server...")
 
 	flog.Info("Tunneling remote port %v to %v", o.remotePort, o.bindAddr)
 
 	sshCmdStr :=
-		fmt.Sprintf("ssh -tt -q -L %v:localhost:%v %v %v '%v  %v --host 127.0.0.1 --auth none --port=%v'",
-			o.bindAddr, o.remotePort, o.sshFlags, host, codeServerPath, dir, o.remotePort,
+		fmt.Sprintf("ssh -tt -q -L %v:127.0.0.1:%v %v %v '%v'",
+			o.bindAddr, o.remotePort, o.sshFlags, host, codeServerCmdStr,
 		)
 	// Starts code-server and forwards the remote port.
 	sshCmd := exec.Command("sh", "-l", "-c", sshCmdStr)

@@ -40,7 +40,9 @@ type rootCmd struct {
 	syncBack          bool
 	printVersion      bool
 	noReuseConnection bool
+	disableTelemetry  bool
 	bindAddr          string
+	remotePort        string
 	sshFlags          string
 	uploadCodeServer  string
 }
@@ -58,7 +60,9 @@ func (c *rootCmd) RegisterFlags(fl *pflag.FlagSet) {
 	fl.BoolVar(&c.syncBack, "b", false, "sync extensions back on termination")
 	fl.BoolVar(&c.printVersion, "version", false, "print version information and exit")
 	fl.BoolVar(&c.noReuseConnection, "no-reuse-connection", false, "do not reuse SSH connection via control socket")
+	fl.BoolVar(&c.disableTelemetry, "disable-telemetry", false, "pass --disable-telemetry flag to code-server")
 	fl.StringVar(&c.bindAddr, "bind", "", "local bind address for SSH tunnel, in [HOST][:PORT] syntax (default: 127.0.0.1)")
+	fl.StringVar(&c.remotePort, "remote-port", "", "specify remote port on which code-server will be started")
 	fl.StringVar(&c.sshFlags, "ssh-flags", "", "custom SSH flags")
 	fl.StringVar(&c.uploadCodeServer, "upload-code-server", "", "custom code-server binary to upload to the remote host")
 }
@@ -90,9 +94,11 @@ func (c *rootCmd) Run(fl *pflag.FlagSet) {
 		skipSync:         c.skipSync,
 		sshFlags:         c.sshFlags,
 		bindAddr:         c.bindAddr,
+		remotePort:       c.remotePort,
 		syncBack:         c.syncBack,
 		reuseConnection:  !c.noReuseConnection,
 		uploadCodeServer: c.uploadCodeServer,
+		disableTelemetry: c.disableTelemetry,
 	})
 
 	if err != nil {
