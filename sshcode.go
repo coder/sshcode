@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net"
@@ -21,7 +22,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
-const codeServerPath = "~/.cache/sshcode/sshcode-server"
+const codeServerDir = "~/.sshcode-server"
 
 const (
 	sshDirectory               = "~/.ssh"
@@ -81,14 +82,14 @@ func sshCode(host, dir string, o options) error {
 	// Upload local code-server or download code-server from CI server.
 	if o.uploadCodeServer != "" {
 		flog.Info("uploading local code-server binary...")
-		err = copyCodeServerBinary(o.sshFlags, host, o.uploadCodeServer, codeServerPath)
+		err = copyCodeServerBinary(o.sshFlags, host, o.uploadCodeServer, codeServerDir)
 		if err != nil {
 			return xerrors.Errorf("failed to upload local code-server binary to remote server: %w", err)
 		}
 
 		sshCmdStr :=
 			fmt.Sprintf("ssh %v %v 'chmod +x %v'",
-				o.sshFlags, host, codeServerPath,
+				o.sshFlags, host, codeServerDir,
 			)
 
 		sshCmd := exec.Command("sh", "-l", "-c", sshCmdStr)
@@ -103,7 +104,10 @@ func sshCode(host, dir string, o options) error {
 		}
 	} else {
 		flog.Info("ensuring code-server is updated...")
-		dlScript := downloadScript(codeServerPath)
+		dlScript, err := downloadScript(codeServerDir)
+		if err != nil {
+			return xerrors.New("failed to download latest code-server")
+		}
 
 		// Downloads the latest code-server and allows it to be executed.
 		sshCmdStr := fmt.Sprintf("ssh %v %v '/usr/bin/env bash -l'", o.sshFlags, host)
@@ -140,13 +144,19 @@ func sshCode(host, dir string, o options) error {
 		flog.Info("synced extensions in %s", time.Since(start))
 	}
 
+	codeServerFlags := []string{
+		fmt.Sprintf("--bind-addr 127.0.0.1:%v", o.remotePort),
+		"--auth none",
+	}
+	codeServerCmdStr := fmt.Sprintf("%v/code-server %v %v", codeServerDir, dir, strings.Join(codeServerFlags, " "))
+
 	flog.Info("starting code-server...")
 
 	flog.Info("Tunneling remote port %v to %v", o.remotePort, o.bindAddr)
 
 	sshCmdStr :=
-		fmt.Sprintf("ssh -tt -q -L %v:localhost:%v %v %v '%v  %v --host 127.0.0.1 --auth none --port=%v'",
-			o.bindAddr, o.remotePort, o.sshFlags, host, codeServerPath, dir, o.remotePort,
+		fmt.Sprintf("ssh -tt -q -L %v:localhost:%v %v %v '%v'",
+			o.bindAddr, o.remotePort, o.sshFlags, host, codeServerCmdStr,
 		)
 	// Starts code-server and forwards the remote port.
 	sshCmd := exec.Command("sh", "-l", "-c", sshCmdStr)
@@ -533,30 +543,45 @@ func rsync(src string, dest string, sshFlags string, excludePaths ...string) err
 	return nil
 }
 
-func downloadScript(codeServerPath string) string {
+type release struct {
+	TagName string `json:"tag_name"`
+}
+
+func downloadScript(codeServerDir string) (string, error) {
+	url := "https://api.github.com/repos/cdr/code-server/releases/latest"
+
+	req, err := http.Get(url)
+	if err != nil {
+		return "", err
+	}
+	defer req.Body.Close()
+
+	data := release{}
+	json.NewDecoder(req.Body).Decode(&data)
+
+	assetName := fmt.Sprintf(`code-server-%v-linux-x86_64`, data.TagName)
+	downloadURL := fmt.Sprintf(`https://github.com/cdr/code-server/releases/download/%v/%v.tar.gz`, data.TagName, assetName)
+
 	return fmt.Sprintf(
 		`set -euxo pipefail || exit 1
 
 [ "$(uname -m)" != "x86_64" ] && echo "Unsupported server architecture $(uname -m). code-server only has releases for x86_64 systems." && exit 1
 pkill -f %v || true
-mkdir -p $HOME/.local/share/code-server %v
+mkdir -p %v
 cd %v
-curlflags="-o latest-linux"
-if [ -f latest-linux ]; then
-	curlflags="$curlflags -z latest-linux"
-fi
-curl $curlflags https://codesrv-ci.cdr.sh/latest-linux
-[ -f %v ] && rm %v
-ln latest-linux %v
-chmod +x %v`,
-		codeServerPath,
-		filepath.ToSlash(filepath.Dir(codeServerPath)),
-		filepath.ToSlash(filepath.Dir(codeServerPath)),
-		codeServerPath,
-		codeServerPath,
-		codeServerPath,
-		codeServerPath,
-	)
+if [ ! -d %v ]; then
+	curl -L %v > release.tar.gz
+	tar -xzf release.tar.gz
+	rm release.tar.gz
+	ln -sf ./%v/code-server code-server
+fi`,
+		codeServerDir,
+		codeServerDir,
+		codeServerDir,
+		assetName,
+		downloadURL,
+		assetName,
+	), nil
 }
 
 // ensureDir creates a directory if it does not exist.
