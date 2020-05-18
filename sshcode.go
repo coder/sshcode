@@ -584,8 +584,8 @@ if [ ! -d %v ]; then
 	curl -L %v > release.tar.gz
 	tar -xzf release.tar.gz
 	rm release.tar.gz
-	ln -sf ./%v/bin/code-server code-server
-fi`,
+fi
+ln -sf ./%v/bin/code-server code-server`,
 		codeServerDir,
 		codeServerDir,
 		codeServerDir,
