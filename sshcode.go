@@ -544,7 +544,11 @@ func rsync(src string, dest string, sshFlags string, excludePaths ...string) err
 }
 
 type release struct {
-	TagName string `json:"tag_name"`
+	Assets []asset `json:"assets"`
+}
+
+type asset struct {
+	DownloadURL string `json:"browser_download_url"`
 }
 
 func downloadScript(codeServerDir string) (string, error) {
@@ -559,8 +563,15 @@ func downloadScript(codeServerDir string) (string, error) {
 	data := release{}
 	json.NewDecoder(req.Body).Decode(&data)
 
-	assetName := fmt.Sprintf(`code-server-%v-linux-x86_64`, data.TagName)
-	downloadURL := fmt.Sprintf(`https://github.com/cdr/code-server/releases/download/%v/%v.tar.gz`, data.TagName, assetName)
+	var downloadURL string
+	for _, asset := range data.Assets {
+		if strings.Contains(asset.DownloadURL, "linux-amd64") {
+			downloadURL = asset.DownloadURL
+		}
+	}
+
+	archiveName := downloadURL[strings.LastIndex(downloadURL, "/")+1:]
+	assetName := strings.TrimSuffix(archiveName, ".tar.gz")
 
 	return fmt.Sprintf(
 		`set -euxo pipefail || exit 1
@@ -573,7 +584,7 @@ if [ ! -d %v ]; then
 	curl -L %v > release.tar.gz
 	tar -xzf release.tar.gz
 	rm release.tar.gz
-	ln -sf ./%v/code-server code-server
+	ln -sf ./%v/bin/code-server code-server
 fi`,
 		codeServerDir,
 		codeServerDir,
