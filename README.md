@@ -1,5 +1,11 @@
 # sshcode
 
+**This project has been deprecated in favour of the [code-server install script](https://github.com/cdr/code-server#quick-install)**
+
+**See the discussion in [#185](https://github.com/cdr/sshcode/issues/185)**
+
+---
+
 [!["Open Issues"](https://img.shields.io/github/issues-raw/cdr/sshcode.svg)](https://github.com/cdr/sshcode/issues)
 [!["Latest Release"](https://img.shields.io/github/release/cdr/sshcode.svg)](https://github.com/cdr/sshcode/releases/latest)
 [![MIT license](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/cdr/sshcode/blob/master/LICENSE)
